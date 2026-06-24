@@ -1,0 +1,431 @@
+import React from "react";
+import Layout from "@/components/Layout/Layout";
+import {
+    BedDouble,
+    Calendar,
+    Clock,
+    DollarSign,
+    TrendingUp,
+    Users,
+    Users2,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Head } from "@inertiajs/react";
+
+export default function Dashboard({ rooms }) {
+    // Hitung occupancy
+    const totalRooms = rooms.length;
+    const occupiedRooms = rooms.filter((r) => r.status === "occupied").length;
+    const occupancyRate =
+        totalRooms > 0
+            ? Number(((occupiedRooms / totalRooms) * 100).toFixed(0))
+            : 0;
+
+    // Tanggal hari ini
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const todayCheckIns = rooms
+        .flatMap((r) => r.reservations)
+        .filter((res) => res.check_in?.startsWith(todayStr)).length;
+
+    const todayCheckOuts = rooms
+        .flatMap((r) => r.reservations)
+        .filter((res) => res.checked_out_at?.startsWith(todayStr)).length;
+
+    // Total revenue (hanya yang checked-out)
+    const totalRevenue = rooms
+        .flatMap((r) => r.reservations)
+        .filter((res) => res.status === "checked-out")
+        .reduce((sum, res) => sum + Number(res.total_price), 0);
+
+    // Format ke Rupiah
+    const totalRevenueRupiah = new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(totalRevenue);
+
+    // Dashboard stats
+    const stats = [
+        {
+            title: "Occupancy Rate",
+            value: `${occupancyRate}%`,
+            description: `${occupiedRooms}/${totalRooms} rooms occupied`,
+            icon: BedDouble,
+            color: "from-blue-500 to-blue-600",
+        },
+        {
+            title: "Today Check-ins",
+            value: todayCheckIns.toString(),
+            description: `${todayCheckOuts} check-outs today`,
+            icon: Calendar,
+            color: "from-green-500 to-green-600",
+        },
+        {
+            title: "Revenue (Month)",
+            value: totalRevenueRupiah,
+            description: "+12% from last month",
+            icon: DollarSign,
+            color: "from-amber-500 to-amber-600",
+        },
+        {
+            title: "Active Guests",
+            value: occupiedRooms.toString(),
+            description: `${
+                rooms
+                    .flatMap((r) => r.reservations)
+                    .filter((res) => res.status === "confirmed").length
+            } upcoming`,
+            icon: Users,
+            color: "from-purple-500 to-purple-600",
+        },
+    ];
+
+    const recentActivity = rooms
+        .flatMap((r) => {
+            const activities = [];
+
+            // RESERVATION EVENTS
+            r.reservations.forEach((res) => {
+                if (res.created_at)
+                    activities.push({
+                        timestamp: new Date(res.created_at),
+                        action: "New Reservation",
+                        detail: `${res.guest.name} - Room ${r.number}`,
+                    });
+                if (res.checked_in_at)
+                    activities.push({
+                        timestamp: new Date(res.checked_in_at),
+                        action: "Check-in completed",
+                        detail: `${res.guest.name} - Room ${r.number}`,
+                    });
+                if (res.checked_out_at)
+                    activities.push({
+                        timestamp: new Date(res.checked_out_at),
+                        action: "Check-out completed",
+                        detail: `${res.guest.name} - Room ${r.number}`,
+                    });
+            });
+
+            // MAINTENANCE EVENTS
+            r.maintenance_tasks.forEach((m) => {
+                if (m.created_at)
+                    activities.push({
+                        timestamp: new Date(m.created_at),
+                        action: "Maintenance reported",
+                        detail: `Room ${r.number} - ${m.issue}`,
+                    });
+                if (m.started_at)
+                    activities.push({
+                        timestamp: new Date(m.started_at),
+                        action: "Maintenance started",
+                        detail: `Room ${r.number} - ${m.issue}`,
+                    });
+                if (m.completed_at)
+                    activities.push({
+                        timestamp: new Date(m.completed_at),
+                        action: "Maintenance completed",
+                        detail: `Room ${r.number} - ${m.issue}`,
+                    });
+            });
+
+            return activities;
+        })
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 15);
+
+    const colSize = Math.ceil(recentActivity.length / 3);
+    const columns = [
+        recentActivity.slice(0, colSize),
+        recentActivity.slice(colSize, colSize * 2),
+        recentActivity.slice(colSize * 2),
+    ];
+
+    return (
+        <>
+            <Head title="Dashboard" />
+
+            <Layout>
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-3xl font-serif text-slate-900 dark:text-slate-100">Dashboard</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mt-1">Welcome to Grand Luxury Hotel Management</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+                        {stats.map((stat) => (
+                            <Card
+                                key={stat.title}
+                                className="border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-sm text-slate-600">
+                                        {stat.title}
+                                    </CardTitle>
+                                    <div
+                                        className={`bg-gradient-to-br ${stat.color} p-2 rounded-lg`}
+                                    >
+                                        <stat.icon className="size-4 text-white" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-3xl font-semibold text-slate-900">
+                                        {stat.value}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        {stat.description}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                        {/* Room Status Overview */}
+                        <Card className="border-slate-200 shadow-sm">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900">
+                                    Room Status Overview
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                                            <span className="text-slate-700">
+                                                Available
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-900">
+                                            {
+                                                rooms.filter(
+                                                    (r) =>
+                                                        r.status ===
+                                                        "available",
+                                                ).length
+                                            }{" "}
+                                            rooms
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                                            <span className="text-slate-700">
+                                                Occupied
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-900">
+                                            {
+                                                rooms.filter(
+                                                    (r) =>
+                                                        r.status === "occupied",
+                                                ).length
+                                            }{" "}
+                                            rooms
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                            <span className="text-slate-700">
+                                                Cleaning
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-900">
+                                            {
+                                                rooms.filter(
+                                                    (r) =>
+                                                        r.status === "cleaning",
+                                                ).length
+                                            }{" "}
+                                            rooms
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-orange-500" />
+                                            <span className="text-slate-700">
+                                                Maintenance
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-900">
+                                            {
+                                                rooms.filter(
+                                                    (r) =>
+                                                        r.status ===
+                                                        "maintenance",
+                                                ).length
+                                            }{" "}
+                                            rooms
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                            <span className="text-slate-700">
+                                                Reserved
+                                            </span>
+                                        </div>
+                                        <span className="font-semibold text-slate-900">
+                                            {
+                                                rooms.filter(
+                                                    (r) =>
+                                                        r.status === "reserved",
+                                                ).length
+                                            }{" "}
+                                            rooms
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Housekeeping Status */}
+                        <Card className="border-slate-200 shadow-sm">
+                            <CardHeader>
+                                <CardTitle className="text-slate-900">
+                                    Housekeeping Status
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {[
+                                        "pending",
+                                        "in-progress",
+                                        "completed",
+                                    ].map((status) => {
+                                        // hitung jumlah room yang punya cleaningTask dengan status tertentu
+                                        const count = rooms.filter((room) =>
+                                            room.cleaning_tasks?.some(
+                                                (task) =>
+                                                    task.status === status,
+                                            ),
+                                        ).length;
+
+                                        const statusConfig = {
+                                            pending: {
+                                                className: "bg-red-50 border-red-200 text-red-600",
+                                                icon: Clock,
+                                                label: "Pending Tasks",
+                                            },
+                                            "in-progress": {
+                                                className: "bg-yellow-50 border-yellow-200 text-yellow-600",
+                                                icon: TrendingUp,
+                                                label: "In Progress",
+                                            },
+                                            completed: {
+                                                className: "bg-green-50 border-green-200 text-green-600",
+                                                icon: BedDouble,
+                                                label: "Completed Today",
+                                            },
+                                        };
+
+                                        const { className, icon: StatusIcon, label } =
+                                            statusConfig[status];
+
+                                        return (
+                                            <div
+                                                key={status}
+                                                className={`flex items-center justify-between p-3 ${className} rounded-lg border`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <StatusIcon
+                                                        className={`size-5 ${className}`}
+                                                    />
+                                                    <span className="text-slate-700">
+                                                        {label}
+                                                    </span>
+                                                </div>
+                                                <span className={`font-semibold ${className}`}
+                                                >
+                                                    {count}{" "}
+                                                    {count > 1
+                                                        ? "rooms"
+                                                        : "room"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card className="border-slate-200 shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-slate-900">
+                                Recent Activity
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {recentActivity.length > 0 ? (
+                                <div className="grid grid-cols-3 gap-6">
+                                    {columns.map((col, i) => (
+                                        <div key={i} className="space-y-3">
+                                            {col.map((act, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`flex items-start gap-4 pb-3 border-b border-slate-100 ${
+                                                        index === col.length - 1
+                                                            ? "last:border-0"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    {/* Kolom tanggal & jam */}
+                                                    <div className="flex flex-col items-start min-w-[80px]">
+                                                        {/* Tanggal tetap kiri */}
+                                                        <span className="text-sm font-semibold text-slate-400">
+                                                            {new Date(
+                                                                act.timestamp,
+                                                            ).toLocaleDateString(
+                                                                "id-ID",
+                                                                {
+                                                                    day: "2-digit",
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                },
+                                                            )}
+                                                        </span>
+
+                                                        {/* Jam di tengah */}
+                                                        <span className="text-xs text-slate-500 mt-1 w-full text-center">
+                                                            {new Date(
+                                                                act.timestamp,
+                                                            ).toLocaleTimeString(
+                                                                "id-ID",
+                                                                {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                    hour12: false,
+                                                                },
+                                                            )}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Detail aktivitas */}
+                                                    <div className="flex-1">
+                                                        <div className="text-slate-900 font-medium">
+                                                            {act.action}
+                                                        </div>
+                                                        <div className="text-sm text-slate-500">
+                                                            {act.detail}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-center text-slate-500 py-8">
+                                    No Recent Activity
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </Layout>
+        </>
+    );
+}
