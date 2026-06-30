@@ -6,42 +6,55 @@ Folder ini berisi preview gambar form hotel untuk E-Learning module.
 
 ```
 public/assets/forms/
-├── reception/
-│   ├── registration-form.png
-│   ├── guest-card.png
-│   ├── breakfast-coupon.png
-│   ├── guest-in-house.png
-│   ├── arrival-book.png
-│   ├── cash-receipt.png
-│   ├── departure-book.png
-│   ├── expected-departure.png
-│   └── guest-bill.png
 │
-└── reservation/
-    ├── reservation-form.png
-    ├── reservation-slip.png
-    ├── expected-arrival.png
-    ├── reservation-diary.png
-    ├── conventional-chart.png
-    └── reservation-confirmation.png
+├── reception/                           # Gambar untuk Reception
+│   ├── Reservation form (1)_PNG/
+│   ├── Reservation Slip (2)_PNG/
+│   ├── Expected Arrival Liest (3)_PNG/
+│   ├── Reservation Diary (4)_PNG/
+│   ├── Conventional Chart (5)_PNG/
+│   └── Reservation Confirmation (6)_PNG/
+│
+└── reservation/                         # Gambar untuk Reservation (Reception Forms)
+    ├── Registration Form (1).png
+    ├── GUEST CARD (2).png
+    ├── BREAKFAST COUPON (3).png
+    ├── GUEST IN HOUSE FORM (5).png
+    ├── Arrival Book (6)_PNG/
+    ├── Cash Receipt (4)_PNG/
+    ├── Departure Book (7)_PNG/
+    ├── Expected Departure Liest (8)_PNG/
+    └── Guest  Bill (9)_PNG/
+
 ```
 
-## Cara Menambahkan Gambar
+## Mapping Exercise Slug ke Gambar
 
-1. Konversi dokumen DOC/XLS ke format PNG atau JPG
-2. Simpan dengan nama yang sesuai slug exercise
-3. Placekan di folder yang sesuai (reception/reservation)
-4. Nama file harus sama dengan slug exercise
+### Reception Exercises
+| Slug | Path Gambar |
+|------|-------------|
+| registration-form | `/assets/forms/reservation/Registration Form (1).png` |
+| guest-card | `/assets/forms/reservation/GUEST CARD (2).png` |
+| breakfast-coupon | `/assets/forms/reservation/BREAKFAST COUPON (3).png` |
+| guest-in-house | `/assets/forms/reservation/GUEST IN HOUSE FORM (5).png` |
+| arrival-book | `/assets/forms/reservation/Arrival Book (6)_PNG/...` |
+| cash-receipt | `/assets/forms/reservation/Cash Receipt (4)_PNG/...` |
+| departure-book | `/assets/forms/reservation/Departure Book (7)_PNG/...` |
+| expected-departure | `/assets/forms/reservation/Expected Departure Liest (8)_PNG/...` |
+| guest-bill | `/assets/forms/reservation/Guest Bill (9)_PNG/...` |
 
-## Referensi Dokumen
+### Reservation Exercises
+| Slug | Path Gambar |
+|------|-------------|
+| reservation-form | `/assets/forms/reception/Reservation form (1)_PNG/...` |
+| reservation-slip | `/assets/forms/reception/Reservation Slip (2)_PNG/...` |
+| expected-arrival | `/assets/forms/reception/Expected Arrival Liest (3)_PNG/...` |
+| reservation-diary | `/assets/forms/reception/Reservation Diary (4)_PNG/...` |
+| conventional-chart | `/assets/forms/reception/Conventional Chart (5)_PNG/...` |
+| reservation-confirmation | `/assets/forms/reception/Reservation Confirmation (6)_PNG/...` |
 
-- **Reception:** `doc/Reception/*.doc` dan `doc/Reception/*.xls`
-- **Reservation:** `doc/Reservasi/*.doc` dan `doc/Reservasi/*.xls`
+## Note
 
-## Ukuran Gambar
-
-Disarankan:
-- Width: 800px - 1200px
-- Format: PNG atau JPG
-- Background: Putih atau transparan
-- Resolution: 72 DPI (web)
+- Folder dan file sudah disesuaikan dengan nama dokumen asli
+- Beberapa form memiliki multiple pages (subfolder _PNG)
+- Service `ExerciseImageService.php` menangani mapping otomatis

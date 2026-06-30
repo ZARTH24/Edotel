@@ -8,13 +8,7 @@ import {
     BookOpen,
     CheckCircle,
     Clock,
-    Eye,
-    FileText,
-    Lock,
     Play,
-    RefreshCw,
-    Send,
-    XCircle,
     ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,13 +29,26 @@ export default function ReceptionShow({
     const { flash } = usePage().props;
     const [showStudyCase, setShowStudyCase] = useState(true);
     const [timer, setTimer] = useState(study_case?.estimated_time || 240);
-    const [timerActive, setTimerActive] = useState(false);
+    const [timerActive, setTimerActive] = useState(true); // Timer langsung nyala
     const [showDocument, setShowDocument] = useState(true);
     const [validationResult, setValidationResult] = useState(null);
     const [wrongFields, setWrongFields] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formImages, setFormImages] = useState([]);
 
     const { post, processing } = useForm();
+
+    // Fetch form images
+    useEffect(() => {
+        fetch(`/elearning/api/form/${exercise.slug}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setFormImages(data.images || []);
+            })
+            .catch((err) => {
+                console.error("Failed to fetch form images:", err);
+            });
+    }, [exercise.slug]);
 
     // Timer effect
     useEffect(() => {
@@ -87,11 +94,6 @@ export default function ReceptionShow({
     const handleSkip = () => {
         setShowStudyCase(false);
         setTimerActive(false);
-    };
-
-    // Start timer
-    const handleStartTimer = () => {
-        setTimerActive(true);
     };
 
     // Submit answer
@@ -246,11 +248,11 @@ export default function ReceptionShow({
                                         Skip
                                     </Button>
                                     <Button
-                                        onClick={handleStartTimer}
+                                        onClick={() => setShowStudyCase(false)}
                                         className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                                     >
                                         <Play className="size-4 mr-2" />
-                                        Mulai Timer
+                                        Lanjut ke Form
                                     </Button>
                                 </div>
                             </CardContent>
@@ -298,9 +300,8 @@ export default function ReceptionShow({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Document Preview */}
                         <DocumentPreview
+                            images={formImages}
                             documentPath={exercise.document_path}
-                            exerciseSlug={exercise.slug}
-                            category="reception"
                             isVisible={showDocument}
                             onToggle={() => setShowDocument(!showDocument)}
                         />

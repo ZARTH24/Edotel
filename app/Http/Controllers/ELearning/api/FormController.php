@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ELearning\api;
 
 use App\Http\Controllers\Controller;
 use App\Services\ELearning\ExerciseFormService;
+use App\Services\ELearning\ExerciseImageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -25,6 +26,7 @@ class FormController extends Controller
         return response()->json([
             'fields' => $config['fields'] ?? [],
             'clues' => $config['clues'] ?? [],
+            'images' => ExerciseImageService::getImagePaths($slug),
         ]);
     }
 }

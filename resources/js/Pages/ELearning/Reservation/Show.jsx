@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout/Layout";
+import ExerciseForm from "@/components/ELearning/ExerciseForm";
+import DocumentPreview from "@/components/ELearning/DocumentPreview";
 import {
     ArrowLeft,
     ArrowRight,
     BookOpen,
     CheckCircle,
     Clock,
-    Eye,
-    FileText,
     Play,
-    RefreshCw,
-    Send,
-    XCircle,
     ChevronRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -32,15 +29,26 @@ export default function ReservationShow({
     const { flash } = usePage().props;
     const [showStudyCase, setShowStudyCase] = useState(true);
     const [timer, setTimer] = useState(study_case?.estimated_time || 240);
-    const [timerActive, setTimerActive] = useState(false);
-    const [showDocument, setShowDocument] = useState(false);
+    const [timerActive, setTimerActive] = useState(true); // Timer langsung nyala
+    const [showDocument, setShowDocument] = useState(true);
     const [validationResult, setValidationResult] = useState(null);
     const [wrongFields, setWrongFields] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [formImages, setFormImages] = useState([]);
 
-    // Initialize form with latest answer if exists
-    const { data, setData, post, processing, errors, reset } = useForm({
-        // Dynamic fields will be set based on exercise
-    });
+    const { post, processing } = useForm();
+
+    // Fetch form images
+    useEffect(() => {
+        fetch(`/elearning/api/form/${exercise.slug}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setFormImages(data.images || []);
+            })
+            .catch((err) => {
+                console.error("Failed to fetch form images:", err);
+            });
+    }, [exercise.slug]);
 
     // Timer effect
     useEffect(() => {
@@ -88,22 +96,22 @@ export default function ReservationShow({
         setTimerActive(false);
     };
 
-    // Start timer
-    const handleStartTimer = () => {
-        setTimerActive(true);
-    };
-
     // Submit answer
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (formData) => {
+        setIsSubmitting(true);
         setValidationResult(null);
         setWrongFields([]);
-        post(`/elearning/reservation/${exercise.slug}`);
+
+        post(`/elearning/reservation/${exercise.slug}`, {
+            data: formData,
+            onFinish: () => {
+                setIsSubmitting(false);
+            },
+        });
     };
 
     // Retry (reset form)
     const handleRetry = () => {
-        reset();
         setValidationResult(null);
         setWrongFields([]);
     };
@@ -192,20 +200,20 @@ export default function ReservationShow({
 
                         {/* Study Case Card */}
                         <Card className="border-slate-200 shadow-lg">
-                            <CardHeader>
+                            <CardContent className="pt-6 space-y-6">
+                                {/* Title */}
                                 <div className="flex items-center gap-3">
                                     <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-lg">
                                         <BookOpen className="size-6 text-white" />
                                     </div>
-                                    <CardTitle className="text-xl">
+                                    <h3 className="text-xl font-semibold">
                                         {study_case.title}
-                                    </CardTitle>
+                                    </h3>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
+
                                 {/* Content */}
                                 <div className="prose prose-slate max-w-none">
-                                    <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 whitespace-pre-wrap">
+                                    <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 whitespace-pre-wrap font-mono text-sm">
                                         {study_case.content}
                                     </div>
                                 </div>
@@ -230,11 +238,11 @@ export default function ReservationShow({
                                         Skip
                                     </Button>
                                     <Button
-                                        onClick={handleStartTimer}
+                                        onClick={() => setShowStudyCase(false)}
                                         className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
                                     >
                                         <Play className="size-4 mr-2" />
-                                        Mulai Timer
+                                        Lanjut ke Form
                                     </Button>
                                 </div>
                             </CardContent>
@@ -275,127 +283,28 @@ export default function ReservationShow({
                                     Attempts: {attempts}
                                 </Badge>
                             )}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowDocument(!showDocument)}
-                            >
-                                <Eye className="size-4 mr-2" />
-                                {showDocument ? "Hide" : "Show"} Document
-                            </Button>
                         </div>
                     </div>
-
-                    {/* Validation Error */}
-                    {wrongFields.length > 0 && (
-                        <Card className="border-red-200 bg-red-50">
-                            <CardContent className="pt-4">
-                                <div className="flex items-start gap-3">
-                                    <XCircle className="size-5 text-red-500 mt-0.5" />
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-red-700">
-                                            Ada jawaban yang salah
-                                        </h4>
-                                        <ul className="mt-2 space-y-1 text-sm text-red-600">
-                                            {wrongFields.map((field, index) => (
-                                                <li key={index}>
-                                                    • {field}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        {validationResult?.clues && Object.keys(validationResult.clues).length > 0 && (
-                                            <div className="mt-4 p-3 bg-white rounded border border-red-200">
-                                                <h5 className="font-medium text-red-700 mb-2">Clue:</h5>
-                                                <ul className="space-y-1 text-sm">
-                                                    {Object.entries(validationResult.clues).map(([field, clue], index) => (
-                                                        wrongFields.includes(field) && (
-                                                            <li key={index} className="text-slate-600">
-                                                                <span className="font-medium capitalize">{field.replace(/_/g, " ")}:</span> {clue}
-                                                            </li>
-                                                        )
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
 
                     {/* Document Preview & Form */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Document Preview */}
-                        {showDocument && (
-                            <Card className="border-slate-200">
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <FileText className="size-5" />
-                                        Document Preview
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg aspect-[3/4] flex items-center justify-center">
-                                        <div className="text-center text-slate-400">
-                                            <FileText className="size-12 mx-auto mb-2" />
-                                            <p className="text-sm">
-                                                {exercise.document_path}
-                                            </p>
-                                            <p className="text-xs mt-1">
-                                                (Preview placeholder)
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                        <DocumentPreview
+                            images={formImages}
+                            documentPath={exercise.document_path}
+                            isVisible={showDocument}
+                            onToggle={() => setShowDocument(!showDocument)}
+                        />
 
                         {/* Exercise Form */}
-                        <Card className="border-slate-200">
-                            <CardHeader>
-                                <CardTitle className="text-lg">
-                                    Isi Form Berikut
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleSubmit} className="space-y-4">
-                                    {/* Placeholder form - will be customized per exercise */}
-                                    <div className="text-center py-12 text-slate-500">
-                                        <FileText className="size-12 mx-auto mb-4 opacity-50" />
-                                        <p>Form untuk latihan ini belum dikonfigurasi.</p>
-                                        <p className="text-sm mt-2">
-                                            Slug: {exercise.slug}
-                                        </p>
-                                    </div>
-
-                                    {/* Form actions */}
-                                    <div className="flex justify-between pt-4 border-t">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleRetry}
-                                        >
-                                            <RefreshCw className="size-4 mr-2" />
-                                            Reset
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                                        >
-                                            {processing ? (
-                                                "Submitting..."
-                                            ) : (
-                                                <>
-                                                    <Send className="size-4 mr-2" />
-                                                    Submit
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
+                        <ExerciseForm
+                            exerciseSlug={exercise.slug}
+                            initialData={latest_answer}
+                            validationResult={validationResult}
+                            onSubmit={handleSubmit}
+                            onReset={handleRetry}
+                            isSubmitting={isSubmitting || processing}
+                        />
                     </div>
 
                     {/* Navigation */}

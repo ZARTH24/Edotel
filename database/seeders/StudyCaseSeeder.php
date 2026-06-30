@@ -25,6 +25,8 @@ class StudyCaseSeeder extends Seeder
                 'exercise_slug' => 'registration-form',
                 'title' => 'Tamu Baru Check-In',
                 'content' => <<<'TEXT'
+Tanggal percakapan ini: 28 Juni 2026
+
 Halo, selamat pagi! Saya Andika Pratama, saya sudah booking kamar untuk 2 malam mulai besok.
 
 Saya pesan kamar Deluxe melalui travel agent saya, atas nama PT Nusa Indah. Berikut detail reservasi saya:
@@ -55,6 +57,8 @@ TEXT,
                 'exercise_slug' => 'guest-card',
                 'title' => 'Pembuatan Guest Card',
                 'content' => <<<'TEXT'
+Tanggal hari ini: 28 Juni 2026
+
 Tamu yang baru check-in tadi siang:
 
 - Nama: Budi Santoso
@@ -72,7 +76,7 @@ Data tambahan tamu:
 - Kewarganegaraan: Indonesia
 - No. Identitas: 3310054567891234 (KTP)
 
-Tamu meminta wake-up call jam 06.30 besok pagi dan minta breakfast di kamar.
+Tamu meminta wake-up call jam 06.30 besok pagi (29 Juni 2026) dan minta breakfast di kamar.
 TEXT,
                 'estimated_time' => 180,
             ],
@@ -198,6 +202,8 @@ TEXT,
                 'exercise_slug' => 'cash-receipt',
                 'title' => 'Pembuatan Cash Receipt',
                 'content' => <<<'TEXT'
+Tanggal hari ini: 28 Juni 2026
+
 Transaksi pembayaran tamu hari ini:
 
 Pembayaran 1 - Kamar 205 (Ahmad Rizki):
@@ -326,10 +332,11 @@ TEXT,
                 'exercise_slug' => 'guest-bill',
                 'title' => 'Pembuatan Guest Bill',
                 'content' => <<<'TEXT'
+Tanggal check-out: 29 Juni 2026
+
 Guest Bill untuk check-out:
 
 Kamar 201 - Ratna Kusuma
-Tanggal: 29 Juni 2026
 
 Room Charges:
 - 27 Juni 2026: Superior Room x 2 nights = Rp 1.500.000
