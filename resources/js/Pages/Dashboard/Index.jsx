@@ -8,11 +8,16 @@ import {
     TrendingUp,
     Users,
     Users2,
+    ClipboardList,
+    CalendarCheck,
+    Trophy,
+    BookOpen,
+    Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 
-export default function Dashboard({ rooms }) {
+export default function Dashboard({ rooms, elearningStats }) {
     // Hitung occupancy
     const totalRooms = rooms.length;
     const occupiedRooms = rooms.filter((r) => r.status === "occupied").length;
@@ -81,6 +86,42 @@ export default function Dashboard({ rooms }) {
         },
     ];
 
+    // E-Learning Stats
+    const eLearningCards = [
+        {
+            title: "Reception Progress",
+            value: `${elearningStats?.reception_progress ?? 0}%`,
+            description: `${elearningStats?.reception_completed ?? 0}/${elearningStats?.reception_total ?? 0} exercises`,
+            icon: ClipboardList,
+            color: "from-blue-500 to-blue-600",
+            href: "/elearning/reception",
+        },
+        {
+            title: "Reservation Progress",
+            value: `${elearningStats?.reservation_progress ?? 0}%`,
+            description: `${elearningStats?.reservation_completed ?? 0}/${elearningStats?.reservation_total ?? 0} exercises`,
+            icon: CalendarCheck,
+            color: "from-green-500 to-green-600",
+            href: "/elearning/reservation",
+        },
+        {
+            title: "Total Progress",
+            value: `${elearningStats?.total_progress ?? 0}%`,
+            description: `${elearningStats?.total_completed ?? 0}/${elearningStats?.total_exercises ?? 0} exercises`,
+            icon: Trophy,
+            color: "from-amber-500 to-amber-600",
+            href: "/elearning",
+        },
+        {
+            title: "Remaining",
+            value: `${elearningStats?.remaining ?? 0}`,
+            description: "exercises left",
+            icon: BookOpen,
+            color: "from-purple-500 to-purple-600",
+            href: "/elearning",
+        },
+    ];
+
     const recentActivity = rooms
         .flatMap((r) => {
             const activities = [];
@@ -108,7 +149,7 @@ export default function Dashboard({ rooms }) {
             });
 
             // MAINTENANCE EVENTS
-            r.maintenance_tasks.forEach((m) => {
+            r.maintenance_tasks?.forEach((m) => {
                 if (m.created_at)
                     activities.push({
                         timestamp: new Date(m.created_at),
@@ -152,6 +193,57 @@ export default function Dashboard({ rooms }) {
                         <p className="text-slate-600 dark:text-slate-400 mt-1">Welcome to Grand Luxury Hotel Management</p>
                     </div>
 
+                    {/* E-Learning Progress Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                E-Learning Progress
+                            </h3>
+                            <Link
+                                href="/elearning"
+                                className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                            >
+                                Lihat Semua →
+                            </Link>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {eLearningCards.map((card) => (
+                                <Link key={card.title} href={card.href}>
+                                    <Card className="border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                            <CardTitle className="text-sm text-slate-600">
+                                                {card.title}
+                                            </CardTitle>
+                                            <div
+                                                className={`bg-gradient-to-br ${card.color} p-2 rounded-lg`}
+                                            >
+                                                <card.icon className="size-4 text-white" />
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-semibold text-slate-900">
+                                                {card.value}
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                {card.description}
+                                            </p>
+                                            {/* Progress Bar */}
+                                            <div className="mt-3 w-full bg-slate-100 rounded-full h-2">
+                                                <div
+                                                    className={`bg-gradient-to-r ${card.color} h-2 rounded-full transition-all`}
+                                                    style={{
+                                                        width: card.value,
+                                                    }}
+                                                />
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Hotel Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                         {stats.map((stat) => (
                             <Card

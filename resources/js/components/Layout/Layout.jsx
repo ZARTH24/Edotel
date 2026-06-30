@@ -15,6 +15,12 @@ import {
     UsersRound,
     Sun,
     Moon,
+    BookOpen,
+    ClipboardList,
+    CalendarCheck,
+    Lock,
+    CheckCircle,
+    ChevronRight,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -30,9 +36,10 @@ import { Toaster, toast } from "sonner";
 
 export default function Layout({ children }) {
     const path = usePage();
-    const { flash, auth } = usePage().props;
+    const { flash, auth, elearning } = usePage().props;
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = React.useState(false);
+    const [elearningExpanded, setElearningExpanded] = React.useState(false);
 
     React.useEffect(() => setMounted(true), []);
 
@@ -58,6 +65,9 @@ export default function Layout({ children }) {
         }
     };
 
+    // Check if menu is unlocked based on E-Learning progress
+    const isMenuUnlocked = elearning?.is_menu_unlocked ?? false;
+
     React.useEffect(() => {
         if (flash?.message) {
             // pilih toast sesuai tipe
@@ -76,6 +86,10 @@ export default function Layout({ children }) {
             }
         }
     }, [flash]);
+
+    // Check if current path is in E-Learning section
+    const isElearningActive = path.url.startsWith("/elearning");
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
             {/* Header */}
@@ -210,63 +224,161 @@ export default function Layout({ children }) {
                 {/* Sidebar */}
                 <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-73px)] dark:bg-slate-900 dark:border-slate-700">
                     <nav className="p-4 space-y-1">
+                        {/* Dashboard - Always visible */}
                         {(auth.user?.role === "front-office" ||
                             auth.user?.role === "admin") && (
-                            <>
-                                <Link
-                                    href={"/Dashboard"}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
-                                        path.url === "/Dashboard"
-                                            ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
-                                            : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
-                                    )}
-                                >
-                                    <LayoutDashboard className="size-5" />
-                                    <span>Dashboard</span>
-                                </Link>
-
-                                <Link
-                                    href={"/Frontoffice"}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
-                                        path.url.startsWith("/Frontoffice")
-                                            ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
-                                            : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
-                                    )}
-                                >
-                                    <Users className="size-5" />
-                                    <span>Front Office</span>
-                                </Link>
-                            </>
-                        )}
-                        {(auth.user?.role === "housekeeping" ||
-                            auth.user?.role === "admin") && (
                             <Link
-                                href={"/Housekeeping"}
+                                href={"/Dashboard"}
                                 className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all ",
-                                    path.url === "/Housekeeping"
+                                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
+                                    path.url === "/Dashboard"
                                         ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
                                         : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
                                 )}
                             >
-                                <Bed className="size-5" />
-                                <span>House Keeping</span>
+                                <LayoutDashboard className="size-5" />
+                                <span>Dashboard</span>
                             </Link>
                         )}
-                        <Link
-                            href={"/Damagereport"}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all ",
-                                path.url === "/Damagereport"
-                                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
-                                    : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+
+                        {/* E-Learning Menu - Always visible */}
+                        <div className="space-y-1">
+                            <Link
+                                href={"/elearning"}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
+                                    isElearningActive
+                                        ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
+                                        : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                                )}
+                            >
+                                <BookOpen className="size-5" />
+                                <span>E-Learning</span>
+                                {elearning?.progress_percentage > 0 && elearning?.progress_percentage < 100 && (
+                                    <Badge variant="outline" className="ml-auto text-xs">
+                                        {elearning.progress_percentage}%
+                                    </Badge>
+                                )}
+                                {elearning?.progress_percentage === 100 && (
+                                    <CheckCircle className="size-4 ml-auto text-green-500" />
+                                )}
+                            </Link>
+
+                            {/* E-Learning Submenu */}
+                            {isElearningActive && (
+                                <div className="ml-4 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                                    <Link
+                                        href={"/elearning/reception"}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all",
+                                            path.url.startsWith("/elearning/reception")
+                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                                                : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800",
+                                        )}
+                                    >
+                                        <ClipboardList className="size-4" />
+                                        <span>Reception</span>
+                                    </Link>
+                                    <Link
+                                        href={"/elearning/reservation"}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all",
+                                            path.url.startsWith("/elearning/reservation")
+                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                                                : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800",
+                                        )}
+                                    >
+                                        <CalendarCheck className="size-4" />
+                                        <span>Reservation</span>
+                                    </Link>
+                                </div>
                             )}
-                        >
-                            <Wrench className="size-5" />
-                            <span>Damage Report</span>
-                        </Link>
+                        </div>
+
+                        {/* Front Office - Locked/Unlocked based on E-Learning */}
+                        {(auth.user?.role === "front-office" ||
+                            auth.user?.role === "admin") && (
+                            <>
+                                {isMenuUnlocked ? (
+                                    <Link
+                                        href={"/Frontoffice"}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
+                                            path.url.startsWith("/Frontoffice")
+                                                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
+                                                : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                                        )}
+                                    >
+                                        <Users className="size-5" />
+                                        <span>Front Office</span>
+                                    </Link>
+                                ) : (
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
+                                        title="Selesaikan seluruh latihan E-Learning terlebih dahulu"
+                                    >
+                                        <Lock className="size-5" />
+                                        <span>Front Office</span>
+                                        <Lock className="size-4 ml-auto" />
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Housekeeping - Locked/Unlocked based on E-Learning */}
+                        {(auth.user?.role === "housekeeping" ||
+                            auth.user?.role === "admin") && (
+                            <>
+                                {isMenuUnlocked ? (
+                                    <Link
+                                        href={"/Housekeeping"}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3 rounded-lg transition-all ",
+                                            path.url === "/Housekeeping"
+                                                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
+                                                : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                                        )}
+                                    >
+                                        <Bed className="size-5" />
+                                        <span>House Keeping</span>
+                                    </Link>
+                                ) : (
+                                    <div
+                                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
+                                        title="Selesaikan seluruh latihan E-Learning terlebih dahulu"
+                                    >
+                                        <Lock className="size-5" />
+                                        <span>House Keeping</span>
+                                        <Lock className="size-4 ml-auto" />
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Damage Report - Locked/Unlocked based on E-Learning */}
+                        {isMenuUnlocked ? (
+                            <Link
+                                href={"/Damagereport"}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all ",
+                                    path.url === "/Damagereport"
+                                        ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md"
+                                        : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                                )}
+                            >
+                                <Wrench className="size-5" />
+                                <span>Damage Report</span>
+                            </Link>
+                        ) : (
+                            <div
+                                className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
+                                title="Selesaikan seluruh latihan E-Learning terlebih dahulu"
+                            >
+                                <Lock className="size-5" />
+                                <span>Damage Report</span>
+                                <Lock className="size-4 ml-auto" />
+                            </div>
+                        )}
                     </nav>
                 </aside>
 

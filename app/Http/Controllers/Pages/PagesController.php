@@ -3,23 +3,63 @@
 namespace App\Http\Controllers\Pages;
 
 use App\Http\Controllers\Controller;
+use App\Models\ELearning\Exercise;
+use App\Models\ELearning\StudentProgress;
 use App\Models\FrontOffice\Reservation;
 use App\Models\FrontOffice\Room;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PagesController extends Controller
 {
     public function dashboard()
     {
+        $userId = Auth::id();
+
         $rooms = Room::with([
             'reservations',
             'reservations.guest',
             'cleaningTasks',
-            'maintenanceTasks',     // relasi maintenance task
+            'maintenanceTasks',
         ])->orderBy('number')->get();
 
-        return inertia('Dashboard/Index', compact('rooms'));
+        // E-Learning Progress
+        $receptionExercises = Exercise::reception()->get();
+        $reservationExercises = Exercise::reservation()->get();
+
+        $receptionTotal = $receptionExercises->count();
+        $receptionCompleted = StudentProgress::where('user_id', $userId)
+            ->whereIn('exercise_id', $receptionExercises->pluck('id'))
+            ->where('status', 'completed')
+            ->count();
+        $receptionProgress = $receptionTotal > 0 ? round(($receptionCompleted / $receptionTotal) * 100) : 0;
+
+        $reservationTotal = $reservationExercises->count();
+        $reservationCompleted = StudentProgress::where('user_id', $userId)
+            ->whereIn('exercise_id', $reservationExercises->pluck('id'))
+            ->where('status', 'completed')
+            ->count();
+        $reservationProgress = $reservationTotal > 0 ? round(($reservationCompleted / $reservationTotal) * 100) : 0;
+
+        $totalExercises = $receptionTotal + $reservationTotal;
+        $totalCompleted = $receptionCompleted + $reservationCompleted;
+        $totalProgress = $totalExercises > 0 ? round(($totalCompleted / $totalExercises) * 100) : 0;
+
+        $elearningStats = [
+            'reception_total' => $receptionTotal,
+            'reception_completed' => $receptionCompleted,
+            'reception_progress' => $receptionProgress,
+            'reservation_total' => $reservationTotal,
+            'reservation_completed' => $reservationCompleted,
+            'reservation_progress' => $reservationProgress,
+            'total_exercises' => $totalExercises,
+            'total_completed' => $totalCompleted,
+            'total_progress' => $totalProgress,
+            'remaining' => $totalExercises - $totalCompleted,
+        ];
+
+        return inertia('Dashboard/Index', compact('rooms', 'elearningStats'));
     }
 
     public function frontoffice(Request $request)
