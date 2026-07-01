@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\HouseKeeping\CleaningTaskRequest;
 use App\Models\FrontOffice\Room;
 use App\Models\HouseKeeping\CleaningTask;
+use App\Services\Simulation\SimulationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,32 @@ class CleaningTaskController extends Controller
 {
     public function store(CleaningTaskRequest $request)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            $data = $request->validated();
+
+            $simulationResult = SimulationService::simulateCleaningTask([
+                'room_id' => $data['room_id'],
+                'priority' => $data['priority'] ?? 'low',
+            ]);
+
+            return back()->with([
+                'message' => '✅ Cleaning Task berhasil DICIPTAKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         $data = $request->validated();
 
         // Cek apakah room sedang dalam status maintenance
@@ -58,6 +85,38 @@ class CleaningTaskController extends Controller
 
     public function assignCleaningTask(Request $request, CleaningTask $task)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            $data = $request->validate([
+                'assigned_to' => 'required|exists:users,id',
+            ]);
+
+            if (!in_array($task->status, ['pending'])) {
+                return back()->with([
+                    'message' => 'This task cannot be started.',
+                    'type' => 'error',
+                ]);
+            }
+
+            $simulationResult = SimulationService::simulateAssignCleaningTask((string) $task->id, $data['assigned_to']);
+
+            return back()->with([
+                'message' => '✅ Task berhasil DITUGASKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         // 1. Validasi input
         $data = $request->validate([
             'assigned_to' => 'required|exists:users,id',
@@ -93,6 +152,34 @@ class CleaningTaskController extends Controller
 
     public function completedCleaningTask(Request $request, CleaningTask $task)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            if ($task->status !== 'in-progress') {
+                return back()->with([
+                    'message' => 'This task cannot be completed.',
+                    'type' => 'error',
+                ]);
+            }
+
+            $simulationResult = SimulationService::simulateCompleteCleaningTask((string) $task->id);
+
+            return back()->with([
+                'message' => '✅ Task berhasil DISELESAIKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         // Pastikan hanya task yang sedang dikerjakan yang bisa diselesaikan
         if ($task->status !== 'in-progress') {
             return back()->with([

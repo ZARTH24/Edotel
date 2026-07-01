@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { Edit, Trash2, Archive, RotateCcw } from "lucide-react";
 import {
     AlertDialog,
@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function Room({ rooms, archivedRooms }) {
+    const { auth } = usePage().props;
+    const isAdmin = auth?.user?.role === "admin";
+    const isFrontOffice = auth?.user?.role === "front-office";
+    const isHousekeeping = auth?.user?.role === "housekeeping";
+    const canManageRooms = isAdmin || isFrontOffice || isHousekeeping;
+
     const [showArchived, setShowArchived] = useState(false);
 
     const getRoomStatusBadge = (status) => {
@@ -62,57 +68,60 @@ export default function Room({ rooms, archivedRooms }) {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                                            <Button
-                                                asChild
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 text-slate-600 hover:text-blue-600 border-slate-200 shadow-sm"
-                                            >
-                                                <Link
-                                                    href={`/Frontoffice/editroom/${room.id}`}
+                                        {/* Tombol aksi - untuk Admin, Front Office, Housekeeping */}
+                                        {canManageRooms && (
+                                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                <Button
+                                                    asChild
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-slate-600 hover:text-blue-600 border-slate-200 shadow-sm"
                                                 >
-                                                    <Edit className="size-3.5" />
-                                                </Link>
-                                            </Button>
-
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-slate-600 hover:text-red-600 border-slate-200 shadow-sm"
+                                                    <Link
+                                                        href={`/Frontoffice/editroom/${room.id}`}
                                                     >
-                                                        <Archive className="size-3.5" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>
-                                                            Archive Room {room.number}?
-                                                        </AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This room will be archived and hidden from the active list. All related data (reservations, cleaning tasks, maintenance reports) will be preserved.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>
-                                                            Cancel
-                                                        </AlertDialogCancel>
-                                                        <AlertDialogAction
-                                                            variant="destructive"
-                                                            onClick={() =>
-                                                                router.delete(
-                                                                    `/Frontoffice/room/${room.id}`,
-                                                                )
-                                                            }
+                                                        <Edit className="size-3.5" />
+                                                    </Link>
+                                                </Button>
+
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-slate-600 hover:text-red-600 border-slate-200 shadow-sm"
                                                         >
-                                                            Archive
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
+                                                            <Archive className="size-3.5" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>
+                                                                Archive Room {room.number}?
+                                                            </AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This room will be archived and hidden from the active list. All related data (reservations, cleaning tasks, maintenance reports) will be preserved.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>
+                                                                Cancel
+                                                            </AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                variant="destructive"
+                                                                onClick={() =>
+                                                                    router.delete(
+                                                                        `/Frontoffice/room/${room.id}`,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Archive
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2 text-sm">
@@ -150,7 +159,8 @@ export default function Room({ rooms, archivedRooms }) {
                     </p>
                 )}
 
-                {archived.length > 0 && (
+                {/* Archived Rooms - untuk Admin, Front Office, Housekeeping */}
+                {canManageRooms && archived.length > 0 && (
                     <div className="mt-6 pt-4 border-t border-slate-200">
                         <button
                             onClick={() => setShowArchived(!showArchived)}

@@ -31,6 +31,7 @@ import ListStaff from "@/components/HouseKeeping/ListStaff";
 export default function Index({ users, adminUsers, rooms, housekeepingUsers }) {
     const [selectedTab, setSelectedTab] = useState("overview");
     const { auth } = usePage().props;
+    const isSiswa = auth?.user?.role === "siswa";
 
     const handleComplete = (taskId) => {
         router.post(`/cleaning-tasks/${taskId}/completed`);
@@ -83,9 +84,11 @@ export default function Index({ users, adminUsers, rooms, housekeepingUsers }) {
                             </p>
                         </div>
 
-                        <div className="flex gap-2">
-                            <CreateCleaningTask rooms={rooms} />
-                        </div>
+                        {!isSiswa && (
+                            <div className="flex gap-2">
+                                <CreateCleaningTask rooms={rooms} />
+                            </div>
+                        )}
                     </div>
 
                     <Tabs value={selectedTab} onValueChange={setSelectedTab}>
@@ -661,64 +664,66 @@ export default function Index({ users, adminUsers, rooms, housekeepingUsers }) {
                                                             )}
                                                         </div>
 
-                                                        {/* ACTIONS */}
-                                                        <div className="ml-4 flex flex-col gap-2">
-                                                            {task.status ===
-                                                                "pending" && (
-                                                                <AssignCleaning
-                                                                    taskId={
-                                                                        task.id
-                                                                    }
-                                                                    users={
-                                                                        housekeepingUsers
-                                                                    }
-                                                                />
-                                                            )}
-                                                            {task.status ===
-                                                                "in-progress" && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="border-green-300 text-green-700 hover:bg-blue-50"
-                                                                    onClick={() =>
-                                                                        handleComplete(
-                                                                            task.id,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <CheckCircle2 className="size-3 mr-1" />
-                                                                    Complete
-                                                                </Button>
-                                                            )}
-                                                            {task.status ===
-                                                                "completed" &&
-                                                                (auth.user
-                                                                    .role !==
-                                                                "admin" ? (
-                                                                    <InspectCleaningTask
+                                                        {/* ACTIONS - Hidden for siswa */}
+                                                        {!isSiswa && (
+                                                            <div className="ml-4 flex flex-col gap-2">
+                                                                {task.status ===
+                                                                    "pending" && (
+                                                                    <AssignCleaning
                                                                         taskId={
                                                                             task.id
                                                                         }
                                                                         users={
-                                                                            adminUsers
+                                                                            housekeepingUsers
                                                                         }
                                                                     />
-                                                                ) : (
+                                                                )}
+                                                                {task.status ===
+                                                                    "in-progress" && (
                                                                     <Button
                                                                         size="sm"
                                                                         variant="outline"
-                                                                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                                                                        className="border-green-300 text-green-700 hover:bg-blue-50"
                                                                         onClick={() =>
-                                                                            handleInspect(
+                                                                            handleComplete(
                                                                                 task.id,
                                                                             )
                                                                         }
                                                                     >
-                                                                        <UserSearch className="size-3 mr-1" />
-                                                                        Inspect
+                                                                        <CheckCircle2 className="size-3 mr-1" />
+                                                                        Complete
                                                                     </Button>
-                                                                ))}
-                                                        </div>
+                                                                )}
+                                                                {task.status ===
+                                                                    "completed" &&
+                                                                    (auth.user
+                                                                        .role !==
+                                                                    "admin" ? (
+                                                                        <InspectCleaningTask
+                                                                            taskId={
+                                                                                task.id
+                                                                            }
+                                                                            users={
+                                                                                adminUsers
+                                                                            }
+                                                                        />
+                                                                    ) : (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                                                                            onClick={() =>
+                                                                                handleInspect(
+                                                                                    task.id,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <UserSearch className="size-3 mr-1" />
+                                                                            Inspect
+                                                                        </Button>
+                                                                    ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

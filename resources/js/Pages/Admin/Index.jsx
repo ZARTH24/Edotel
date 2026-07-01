@@ -72,6 +72,7 @@ export default function Index({ users }) {
             admin: "bg-rose-100 text-rose-700 border-rose-200",
             "front-office": "bg-blue-100 text-blue-700 border-blue-200",
             housekeeping: "bg-teal-100 text-teal-700 border-teal-200",
+            siswa: "bg-amber-100 text-amber-700 border-amber-200",
         };
         return styles[role] || "bg-slate-100 text-slate-700";
     };
@@ -81,6 +82,7 @@ export default function Index({ users }) {
             admin: "Administrator",
             "front-office": "Front Office Staff",
             housekeeping: "Housekeeping Staff",
+            siswa: "Siswa",
         };
         return labels[role] || role;
     };

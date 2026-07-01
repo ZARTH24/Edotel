@@ -265,6 +265,9 @@ export default function Create() {
                                                 <SelectItem value="housekeeping">
                                                     Housekeeping Staff
                                                 </SelectItem>
+                                                <SelectItem value="siswa">
+                                                    Siswa
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.role && (

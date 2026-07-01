@@ -18,9 +18,25 @@ class UserSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        // 1 Admin
+        // =====================================================
+        // ADMIN (Guru) - 1 user
+        // =====================================================
         DB::table('users')->insert([
-            'name' => $faker->name,
+            'name' => 'Guru Edotel',
+            'email' => 'guru@example.com',
+            'email_verified_at' => Carbon::now(),
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'avatar' => null,
+            'phone' => $faker->phoneNumber,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Admin kedua (opsional)
+        DB::table('users')->insert([
+            'name' => 'Admin Hotel',
             'email' => 'admin@example.com',
             'email_verified_at' => Carbon::now(),
             'password' => Hash::make('password'),
@@ -32,24 +48,40 @@ class UserSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
-        // Role-role lain
-        $roles = ['front-office', 'housekeeping'];
+        // =====================================================
+        // SISWA - 10 users
+        // =====================================================
+        $siswaData = [
+            ['name' => 'Ahmad Fauzi', 'nisn' => '1234567890', 'kelas' => 'XII AHU 1'],
+            ['name' => 'Siti Nurhaliza', 'nisn' => '1234567891', 'kelas' => 'XII AHU 1'],
+            ['name' => 'Budi Santoso', 'nisn' => '1234567892', 'kelas' => 'XII AHU 1'],
+            ['name' => 'Dewi Lestari', 'nisn' => '1234567893', 'kelas' => 'XII AHU 2'],
+            ['name' => 'Rizky Ramadhan', 'nisn' => '1234567894', 'kelas' => 'XII AHU 2'],
+            ['name' => 'Putri Ayu', 'nisn' => '1234567895', 'kelas' => 'XII AHU 2'],
+            ['name' => 'Dimas Prasetyo', 'nisn' => '1234567896', 'kelas' => 'XII AHU 3'],
+            ['name' => 'Nurul Hidayah', 'nisn' => '1234567897', 'kelas' => 'XII AHU 3'],
+            ['name' => 'Galang Akbar', 'nisn' => '1234567898', 'kelas' => 'XII AHU 3'],
+            ['name' => 'Rina Wulandari', 'nisn' => '1234567899', 'kelas' => 'XII AHU 3'],
+        ];
 
-        foreach ($roles as $role) {
-            for ($i = 1; $i <= 3; $i++) { // buat 3 akun per role
-                DB::table('users')->insert([
-                    'name' => $faker->name,
-                    'email' => $faker->unique()->safeEmail,
-                    'email_verified_at' => $role === 'front-office' ? Carbon::now() : null,
-                    'password' => Hash::make('password'),
-                    'role' => $role,
-                    'avatar' => null,
-                    'phone' => $faker->phoneNumber,
-                    'is_active' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+        foreach ($siswaData as $index => $siswa) {
+            DB::table('users')->insert([
+                'name' => $siswa['name'],
+                'email' => strtolower(str_replace(' ', '.', $siswa['name'])) . '@siswa.sch.id',
+                'email_verified_at' => Carbon::now(),
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+                'avatar' => null,
+                'phone' => $faker->phoneNumber,
+                'nisn' => $siswa['nisn'],
+                'kelas' => $siswa['kelas'],
+                'is_active' => true,
+                'is_menu_unlocked' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
+
+        $this->command->info('Seeded 2 admin dan 10 siswa.');
     }
 }

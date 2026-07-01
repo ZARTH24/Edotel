@@ -44,7 +44,7 @@ class UserRequest extends FormRequest
                 Password::defaults()
             ],
 
-            'role' => ['required', 'in:admin,front-office,housekeeping'],
+            'role' => ['required', 'in:admin,front-office,housekeeping,siswa'],
             'phone' => ['nullable', 'string', 'max:50'],
             'is_active' => ['required'],
         ];
@@ -53,12 +53,12 @@ class UserRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Full name is required.',
-            'email.required' => 'Email address is required.',
-            'email.unique' => 'This email is already registered in the Edotel system.',
-            'password.required' => 'Account password is required.',
-            'role.required' => 'Please select a staff position/role.',
-            'role.in' => 'The selected role is invalid.',
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.unique' => 'Email ini sudah terdaftar di sistem Edotel.',
+            'password.required' => 'Password akun wajib diisi.',
+            'role.required' => 'Pilih peran pengguna.',
+            'role.in' => 'Peran yang dipilih tidak valid.',
         ];
     }
 }

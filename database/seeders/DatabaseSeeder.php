@@ -22,5 +22,10 @@ class DatabaseSeeder extends Seeder
             ExerciseSeeder::class,
             StudyCaseSeeder::class,
         ]);
+
+        // Optional: Seed test progress data for testing unlock feature
+        // Uncomment the line below to run, or run separately with:
+        // php artisan db:seed --class=TestProgressSeeder
+        // $this->call(TestProgressSeeder::class);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\ELearning\Exercise;
 use App\Models\ELearning\StudentProgress;
+use App\Services\Simulation\SimulationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,8 @@ class HandleInertiaRequests extends Middleware
                 'type' => fn() => $request->session()->get('type'),
                 'validation' => fn() => $request->session()->get('validation'),
                 'wrong_fields' => fn() => $request->session()->get('wrong_fields'),
+                'is_simulation' => fn() => $request->session()->get('is_simulation'),
+                'simulation_id' => fn() => $request->session()->get('simulation_id'),
             ],
             'auth' => [
                 'user' => fn() => $request->user() ? [
@@ -53,11 +56,42 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'role' => $request->user()->role,
                     'phone' => $request->user()->phone,
+                    'is_menu_unlocked' => $request->user()->is_menu_unlocked ?? false,
                     'created_at' => $request->user()->created_at->diffForHumans(),
                     'updated_at' => $request->user()->updated_at->diffForHumans(),
                 ] : null,
             ],
             'elearning' => $this->getElearningProgress($request->user()),
+            'simulation' => $this->getSimulationData($request->user()),
+        ];
+    }
+
+    /**
+     * Get simulation mode data
+     */
+    protected function getSimulationData($user)
+    {
+        if (!$user || $user->role !== 'siswa') {
+            return [
+                'is_simulation_mode' => false,
+                'is_student' => false,
+                'summary' => null,
+            ];
+        }
+
+        // Check if simulation mode is active OR if user has unlocked menus
+        $isSimulationMode = SimulationService::isSimulationMode() || $user->is_menu_unlocked;
+
+        // Ensure simulation mode is enabled in session if user has unlocked menus
+        if (!$isSimulationMode && $user->is_menu_unlocked) {
+            SimulationService::enableSimulation();
+            $isSimulationMode = true;
+        }
+
+        return [
+            'is_simulation_mode' => $isSimulationMode,
+            'is_student' => true,
+            'summary' => SimulationService::getSimulationSummary(),
         ];
     }
 

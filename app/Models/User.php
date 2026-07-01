@@ -28,6 +28,8 @@ class User extends Authenticatable
         'avatar',
         'is_active',
         'phone',
+        'is_menu_unlocked',
+        'unlocked_at',
     ];
 
     /**

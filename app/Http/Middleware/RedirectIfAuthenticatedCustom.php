@@ -21,14 +21,12 @@ class RedirectIfAuthenticatedCustom
             $role = Auth::user()->role ?? 'user'; // default jika role belum ada
 
             // Redirect berdasarkan role
-            switch ($role) {
-                case 'housekeeping':
-                    return redirect('/Housekeeping');
-                case 'front-office':
-                    return redirect('/Dashboard');
-                case 'admin':
-                default:
-                    return redirect('/Dashboard');
+            if (in_array($role, ['admin', 'front-office', 'housekeeping'])) {
+                // Staff -> Dashboard
+                return redirect('/Dashboard');
+            } else {
+                // Siswa -> Siswa Dashboard
+                return redirect('/siswa/dashboard');
             }
         }
         return $next($request);

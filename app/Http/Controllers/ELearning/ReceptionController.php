@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ELearning\Exercise;
 use App\Models\ELearning\StudentAnswer;
 use App\Models\ELearning\StudentProgress;
+use App\Models\User;
 use App\Services\ELearning\ExerciseFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -297,6 +298,36 @@ class ReceptionController extends Controller
                     ->where('exercise_id', $firstReservation->id)
                     ->where('status', 'locked')
                     ->update(['status' => 'opened']);
+            }
+        }
+
+        // Also check if ALL exercises are completed to unlock menus
+        $this->checkAndUnlockMenus($userId);
+    }
+
+    /**
+     * Check if all E-Learning exercises are completed and unlock menus.
+     */
+    protected function checkAndUnlockMenus(int $userId): void
+    {
+        // Get all exercises
+        $allExercises = Exercise::all();
+        $totalExercises = $allExercises->count();
+
+        // Count completed exercises
+        $completedCount = StudentProgress::where('user_id', $userId)
+            ->whereIn('exercise_id', $allExercises->pluck('id'))
+            ->where('status', 'completed')
+            ->count();
+
+        // If all exercises completed, unlock menus for siswa
+        if ($completedCount >= $totalExercises && $totalExercises > 0) {
+            $user = User::find($userId);
+            if ($user && $user->role === 'siswa' && !$user->is_menu_unlocked) {
+                $user->update([
+                    'is_menu_unlocked' => true,
+                    'unlocked_at' => now(),
+                ]);
             }
         }
     }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
     Select,
@@ -44,6 +44,9 @@ export default function TabsHistoryReservation({
     months,
     pagination,
 }) {
+    const { auth } = usePage().props;
+    const isSiswa = auth?.user?.role === "siswa";
+
     const hasData = reservations && reservations.length > 0;
     const [selectedYear, setSelectedYear] = useState(filters.year);
     const [selectedMonth, setSelectedMonth] = useState(filters.month);
@@ -176,38 +179,64 @@ export default function TabsHistoryReservation({
                 </CardHeader>
             </Card>
 
-            {/* Monthly Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatCard
-                    title="Total Reservations"
-                    value={stats.totalReservations}
-                    icon={<Calendar className="size-4 text-blue-600" />}
-                    subText={`${months.find((m) => m.value === selectedMonth)?.label} ${selectedYear}`}
-                    exportLink={
-                        hasData && selectedMonth !== "all"
-                            ? `/Frontoffice/reservations/export?year=${selectedYear}&month=${selectedMonth}`
-                            : null
-                    }
-                />
-                <StatCard
-                    title="Total Revenue"
-                    value={`Rp ${stats.totalRevenue.toLocaleString("id-ID")}`}
-                    icon={<DollarSign className="size-4 text-green-600" />}
-                    subText="Monthly earnings"
-                />
-                <StatCard
-                    title="Checked Out"
-                    value={stats.checkedOut}
-                    icon={<LogOut className="size-4 text-purple-600" />}
-                    subText="Completed stays"
-                />
-                <StatCard
-                    title="Cancelled"
-                    value={stats.cancelled}
-                    icon={<CreditCard className="size-4 text-red-600" />}
-                    subText="Cancellations"
-                />
-            </div>
+            {/* Monthly Stats - Hide revenue info for siswa */}
+            {!isSiswa && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <StatCard
+                        title="Total Reservations"
+                        value={stats.totalReservations}
+                        icon={<Calendar className="size-4 text-blue-600" />}
+                        subText={`${months.find((m) => m.value === selectedMonth)?.label} ${selectedYear}`}
+                        exportLink={
+                            hasData && selectedMonth !== "all"
+                                ? `/Frontoffice/reservations/export?year=${selectedYear}&month=${selectedMonth}`
+                                : null
+                        }
+                    />
+                    <StatCard
+                        title="Total Revenue"
+                        value={`Rp ${stats.totalRevenue.toLocaleString("id-ID")}`}
+                        icon={<DollarSign className="size-4 text-green-600" />}
+                        subText="Monthly earnings"
+                    />
+                    <StatCard
+                        title="Checked Out"
+                        value={stats.checkedOut}
+                        icon={<LogOut className="size-4 text-purple-600" />}
+                        subText="Completed stays"
+                    />
+                    <StatCard
+                        title="Cancelled"
+                        value={stats.cancelled}
+                        icon={<CreditCard className="size-4 text-red-600" />}
+                        subText="Cancellations"
+                    />
+                </div>
+            )}
+
+            {/* Simplified stats for siswa */}
+            {isSiswa && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <StatCard
+                        title="Total Reservations"
+                        value={stats.totalReservations}
+                        icon={<Calendar className="size-4 text-blue-600" />}
+                        subText={`${months.find((m) => m.value === selectedMonth)?.label} ${selectedYear}`}
+                    />
+                    <StatCard
+                        title="Checked Out"
+                        value={stats.checkedOut}
+                        icon={<LogOut className="size-4 text-purple-600" />}
+                        subText="Completed stays"
+                    />
+                    <StatCard
+                        title="Cancelled"
+                        value={stats.cancelled}
+                        icon={<CreditCard className="size-4 text-red-600" />}
+                        subText="Cancellations"
+                    />
+                </div>
+            )}
 
             {/* History Table*/}
             <Card className="border-slate-200 shadow-sm">
@@ -256,9 +285,11 @@ export default function TabsHistoryReservation({
                                             <th className="text-left py-3 px-4 text-sm text-slate-600">
                                                 Status
                                             </th>
-                                            <th className="text-left py-3 px-4 text-sm text-slate-600">
-                                                Total
-                                            </th>
+                                            {!isSiswa && (
+                                                <th className="text-left py-3 px-4 text-sm text-slate-600">
+                                                    Total
+                                                </th>
+                                            )}
                                             <th className="text-left py-3 px-4 text-sm text-slate-600">
                                                 Actions
                                             </th>
@@ -352,14 +383,16 @@ export default function TabsHistoryReservation({
                                                             {reservation.status}
                                                         </Badge>
                                                     </td>
-                                                    <td className="py-3 px-4 text-slate-700 font-semibold">
-                                                        Rp{" "}
-                                                        {Number(
-                                                            reservation.total_price,
-                                                        ).toLocaleString(
-                                                            "id-ID",
-                                                        )}
-                                                    </td>
+                                                    {!isSiswa && (
+                                                        <td className="py-3 px-4 text-slate-700 font-semibold">
+                                                            Rp{" "}
+                                                            {Number(
+                                                                reservation.total_price,
+                                                            ).toLocaleString(
+                                                                "id-ID",
+                                                            )}
+                                                        </td>
+                                                    )}
                                                     <td className="py-3 px-4">
                                                         <Button
                                                             variant="outline"
@@ -454,8 +487,8 @@ export default function TabsHistoryReservation({
                 </CardContent>
             </Card>
 
-            {/* Summary Footer */}
-            {reservations.length > 0 && (
+            {/* Summary Footer - Hide revenue for siswa */}
+            {reservations.length > 0 && !isSiswa && (
                 <Card className="border-amber-200 bg-amber-50 shadow-sm">
                     <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
@@ -503,6 +536,54 @@ export default function TabsHistoryReservation({
                                                       stats.totalReservations,
                                               ).toLocaleString("id-ID")
                                             : 0}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Simplified Summary for siswa */}
+            {reservations.length > 0 && isSiswa && (
+                <Card className="border-slate-200 bg-slate-50 shadow-sm">
+                    <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="size-5 text-slate-700" />
+                                <span className="text-slate-700">
+                                    Summary for{" "}
+                                    {
+                                        months.find(
+                                            (m) => m.value === selectedMonth,
+                                        )?.label
+                                    }{" "}
+                                    {selectedYear}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                    <div className="text-sm text-slate-600">
+                                        Total Bookings
+                                    </div>
+                                    <div className="text-xl font-semibold text-slate-900">
+                                        {stats.totalReservations}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-sm text-slate-600">
+                                        Checked Out
+                                    </div>
+                                    <div className="text-xl font-semibold text-green-700">
+                                        {stats.checkedOut}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-sm text-slate-600">
+                                        Cancelled
+                                    </div>
+                                    <div className="text-xl font-semibold text-red-700">
+                                        {stats.cancelled}
                                     </div>
                                 </div>
                             </div>

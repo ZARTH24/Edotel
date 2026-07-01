@@ -254,6 +254,9 @@ export default function Edit({ user }) {
                                                 <SelectItem value="housekeeping">
                                                     Housekeeping Staff
                                                 </SelectItem>
+                                                <SelectItem value="siswa">
+                                                    Siswa
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.role && (

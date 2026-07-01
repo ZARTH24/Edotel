@@ -8,6 +8,7 @@ use App\Models\ELearning\StudentProgress;
 use App\Models\FrontOffice\Reservation;
 use App\Models\FrontOffice\Room;
 use App\Models\User;
+use App\Services\Simulation\SimulationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -24,7 +25,7 @@ class PagesController extends Controller
             'maintenanceTasks',
         ])->orderBy('number')->get();
 
-        // E-Learning Progress
+        // E-Learning Progress for current user
         $receptionExercises = Exercise::reception()->get();
         $reservationExercises = Exercise::reservation()->get();
 
@@ -59,7 +60,56 @@ class PagesController extends Controller
             'remaining' => $totalExercises - $totalCompleted,
         ];
 
-        return inertia('Dashboard/Index', compact('rooms', 'elearningStats'));
+        // Student Summary Stats for Admin
+        $user = Auth::user();
+        $studentStats = null;
+
+        if ($user->role === 'admin') {
+            $allStudents = User::where('role', 'siswa')->get();
+            $totalStudents = $allStudents->count();
+
+            $studentProgressData = $allStudents->map(function ($student) use ($receptionExercises, $reservationExercises) {
+                $receptionDone = StudentProgress::where('user_id', $student->id)
+                    ->whereIn('exercise_id', $receptionExercises->pluck('id'))
+                    ->where('status', 'completed')
+                    ->count();
+                $reservationDone = StudentProgress::where('user_id', $student->id)
+                    ->whereIn('exercise_id', $reservationExercises->pluck('id'))
+                    ->where('status', 'completed')
+                    ->count();
+                $totalExercises = $receptionExercises->count() + $reservationExercises->count();
+                $totalDone = $receptionDone + $reservationDone;
+                $progress = $totalExercises > 0 ? round(($totalDone / $totalExercises) * 100) : 0;
+
+                return [
+                    'reception_completed' => $receptionDone,
+                    'reception_total' => $receptionExercises->count(),
+                    'reservation_completed' => $reservationDone,
+                    'reservation_total' => $reservationExercises->count(),
+                    'total_completed' => $totalDone,
+                    'total_exercises' => $totalExercises,
+                    'progress' => $progress,
+                    'is_done' => $totalDone >= $totalExercises && $totalExercises > 0,
+                ];
+            });
+
+            $selesaiCount = $studentProgressData->where('is_done', true)->count();
+            $belumSelesaiCount = $totalStudents - $selesaiCount;
+            $avgReceptionProgress = $totalStudents > 0 ? round($studentProgressData->avg('reception_completed') / max($receptionExercises->count(), 1) * 100) : 0;
+            $avgReservationProgress = $totalStudents > 0 ? round($studentProgressData->avg('reservation_completed') / max($reservationExercises->count(), 1) * 100) : 0;
+            $avgTotalProgress = $totalStudents > 0 ? round($studentProgressData->avg('progress')) : 0;
+
+            $studentStats = [
+                'total_siswa' => $totalStudents,
+                'siswa_selesai' => $selesaiCount,
+                'siswa_belum_selesai' => $belumSelesaiCount,
+                'avg_reception_progress' => $avgReceptionProgress,
+                'avg_reservation_progress' => $avgReservationProgress,
+                'avg_total_progress' => $avgTotalProgress,
+            ];
+        }
+
+        return inertia('Dashboard/Index', compact('rooms', 'elearningStats', 'studentStats'));
     }
 
     public function frontoffice(Request $request)
@@ -120,6 +170,43 @@ class PagesController extends Controller
 
         $tab = $request->input('tab', 'reservations');
 
+        // --- 6. CHECK SIMULATION MODE - merge simulation data ---
+        $user = auth()->user();
+        $isSimulation = SimulationService::isSimulationMode() || ($user && $user->role === 'siswa' && $user->is_menu_unlocked);
+
+        if ($isSimulation) {
+            $simulationData = SimulationService::getSimulationData();
+
+            // Add simulated reservations
+            $simulatedReservations = $simulationData['reservations'] ?? [];
+            foreach ($simulatedReservations as $simRes) {
+                if (in_array($simRes['status'] ?? '', ['confirmed', 'checked-in'])) {
+                    $room = Room::find($simRes['room_id']);
+                    $reservations->push((object)[
+                        'id' => uniqid('sim_'),
+                        'booking_reference' => $simRes['booking_reference'] ?? null,
+                        'room_id' => $simRes['room_id'],
+                        'check_in' => $simRes['check_in'],
+                        'check_out' => $simRes['check_out'],
+                        'total_price' => $simRes['total_price'] ?? 0,
+                        'total_price_rupiah' => 'Rp ' . number_format($simRes['total_price'] ?? 0, 0, ',', '.'),
+                        'status' => $simRes['status'],
+                        'payment_status' => $simRes['payment_status'] ?? 'pending',
+                        'number_of_guests' => 1,
+                        'is_simulated' => true,
+                        'simulated_at' => $simRes['simulated_at'] ?? null,
+                        'guest' => (object)[
+                            'id' => uniqid('sim_guest_'),
+                            'name' => $simRes['guest_data']['name'] ?? 'Simulated Guest',
+                            'email' => $simRes['guest_data']['email'] ?? null,
+                            'phone' => $simRes['guest_data']['phone'] ?? null,
+                        ],
+                        'room' => $room,
+                    ]);
+                }
+            }
+        }
+
         return inertia("FrontOffice/Index", [
             'rooms' => Room::orderBy('number', 'asc')->get(),
             'archivedRooms' => Room::onlyTrashed()->orderBy('number', 'asc')->get(),
@@ -142,11 +229,13 @@ class PagesController extends Controller
 
     public function housekeeping()
     {
-        $housekeepingUsers = User::where('role', 'housekeeping')->get();
+        // Untuk sistem 2 role (admin & siswa), housekeeping staff adalah admin
+        $housekeepingUsers = User::where('role', 'admin')->get();
         $adminUsers = User::where('role', 'admin')->get();
         $rooms = Room::orderBy('number', 'asc')->with(['cleaningTasks.assign', 'cleaningTasks.inspect', 'maintenanceTasks'])->get();
 
-        $users = User::whereIn('role', ['housekeeping'])
+        // Admin mengelola cleaning tasks
+        $users = User::where('role', 'admin')
             ->withCount([
                 'assignedTasks as pending' => fn($q) => $q->where('status', 'pending'),
                 'assignedTasks as in_progress' => fn($q) => $q->where('status', 'in-progress'),
@@ -156,6 +245,35 @@ class PagesController extends Controller
                 'assignedTasks' => fn($q) => $q->with('room')->whereIn('status', ['pending', 'in-progress'])
             ])
             ->get();
+
+        // Check if simulation mode is active - merge simulation data
+        $user = auth()->user();
+        $isSimulation = SimulationService::isSimulationMode() || ($user && $user->role === 'siswa' && $user->is_menu_unlocked);
+
+        if ($isSimulation) {
+            $simulationData = SimulationService::getSimulationData();
+            $simulatedTasks = $simulationData['cleaning_tasks'] ?? [];
+
+            // Add simulated tasks to rooms
+            foreach ($rooms as $room) {
+                $roomCleaningTasks = $room->cleaningTasks->toArray();
+                foreach ($simulatedTasks as $simTask) {
+                    if ($simTask['room_id'] == $room->id) {
+                        $roomCleaningTasks[] = [
+                            'id' => $simTask['task_id'] ?? uniqid('sim_'),
+                            'room_id' => $simTask['room_id'],
+                            'priority' => $simTask['priority'] ?? 'low',
+                            'status' => $simTask['status'] ?? 'pending',
+                            'assigned_to' => $simTask['assigned_to'] ?? null,
+                            'is_simulated' => true,
+                            'simulated_at' => $simTask['simulated_at'] ?? null,
+                        ];
+                    }
+                }
+                $room->setRelation('cleaningTasks', collect($roomCleaningTasks));
+            }
+        }
+
         return inertia("HouseKeeping/Index", compact('rooms', 'housekeepingUsers', 'adminUsers', 'users'));
     }
 

@@ -13,11 +13,22 @@ import {
     Trophy,
     BookOpen,
     Lock,
+    CheckCircle,
+    BarChart3,
+    ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Head, Link } from "@inertiajs/react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Head, Link, usePage } from "@inertiajs/react";
 
-export default function Dashboard({ rooms, elearningStats }) {
+export default function Dashboard({ rooms, elearningStats, studentStats }) {
+    const { auth } = usePage().props;
+    const isAdmin = auth.user?.role === "admin";
+    const isSiswa = auth.user?.role === "siswa";
+    const isFrontOffice = auth.user?.role === "front-office";
+    const isHousekeeping = auth.user?.role === "housekeeping";
     // Hitung occupancy
     const totalRooms = rooms.length;
     const occupiedRooms = rooms.filter((r) => r.status === "occupied").length;
@@ -193,19 +204,147 @@ export default function Dashboard({ rooms, elearningStats }) {
                         <p className="text-slate-600 dark:text-slate-400 mt-1">Welcome to Grand Luxury Hotel Management</p>
                     </div>
 
-                    {/* E-Learning Progress Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                E-Learning Progress
-                            </h3>
-                            <Link
-                                href="/elearning"
-                                className="text-sm text-amber-600 hover:text-amber-700 font-medium"
-                            >
-                                Lihat Semua →
-                            </Link>
+                    {/* Student Monitoring Section - Admin Only */}
+                    {isAdmin && studentStats && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                                    Monitoring Siswa
+                                </h3>
+                                <Link
+                                    href="/elearning/progress-siswa"
+                                    className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                                >
+                                    Lihat Detail →
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Card className="border-slate-200 shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-sm text-slate-600">
+                                            Total Siswa
+                                        </CardTitle>
+                                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
+                                            <Users className="size-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-slate-900">
+                                            {studentStats.total_siswa}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Siswa terdaftar
+                                        </p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-slate-200 shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-sm text-slate-600">
+                                            Siswa Selesai
+                                        </CardTitle>
+                                        <div className="bg-gradient-to-br from-green-500 to-green-600 p-2 rounded-lg">
+                                            <CheckCircle className="size-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-green-600">
+                                            {studentStats.siswa_selesai}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Telah menyelesaikan E-Learning
+                                        </p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-slate-200 shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-sm text-slate-600">
+                                            Belum Selesai
+                                        </CardTitle>
+                                        <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-2 rounded-lg">
+                                            <Clock className="size-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-amber-600">
+                                            {studentStats.siswa_belum_selesai}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Masih dalam pembelajaran
+                                        </p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-slate-200 shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-sm text-slate-600">
+                                            Rata-rata Progress
+                                        </CardTitle>
+                                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2 rounded-lg">
+                                            <BarChart3 className="size-4 text-white" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-purple-600">
+                                            {studentStats.avg_total_progress}%
+                                        </div>
+                                        <div className="mt-2 w-full bg-slate-100 rounded-full h-2">
+                                            <div
+                                                className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all"
+                                                style={{ width: `${studentStats.avg_total_progress}%` }}
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Quick Progress Overview */}
+                            <Card className="border-slate-200 shadow-sm">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-slate-900">
+                                            Overview Progress Siswa
+                                        </CardTitle>
+                                        <Link href="/elearning/progress-siswa">
+                                            <Button variant="outline" size="sm">
+                                                Lihat Semua Siswa
+                                                <ChevronRight className="size-4 ml-1" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                            <p className="text-sm text-slate-600 mb-2">Reception Completion</p>
+                                            <div className="text-3xl font-bold text-blue-600">
+                                                {studentStats.avg_reception_progress}%
+                                            </div>
+                                            <Progress value={studentStats.avg_reception_progress} className="h-2 mt-2" />
+                                        </div>
+                                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                                            <p className="text-sm text-slate-600 mb-2">Reservation Completion</p>
+                                            <div className="text-3xl font-bold text-green-600">
+                                                {studentStats.avg_reservation_progress}%
+                                            </div>
+                                            <Progress value={studentStats.avg_reservation_progress} className="h-2 mt-2" />
+                                        </div>
+                                        <div className="text-center p-4 bg-amber-50 rounded-lg">
+                                            <p className="text-sm text-slate-600 mb-2">Total Completion</p>
+                                            <div className="text-3xl font-bold text-amber-600">
+                                                {studentStats.avg_total_progress}%
+                                            </div>
+                                            <Progress value={studentStats.avg_total_progress} className="h-2 mt-2" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
+                    )}
+
+                    {/* E-Learning Progress Section - hanya untuk Siswa */}
+                    {isSiswa ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {eLearningCards.map((card) => (
                                 <Link key={card.title} href={card.href}>
@@ -241,7 +380,7 @@ export default function Dashboard({ rooms, elearningStats }) {
                                 </Link>
                             ))}
                         </div>
-                    </div>
+                    ) : null}
 
                     {/* Hotel Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">

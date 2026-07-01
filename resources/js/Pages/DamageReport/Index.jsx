@@ -21,10 +21,11 @@ import {
     TrendingUp,
     Eye,
     Download,
+    EyeOff,
 } from "lucide-react";
 import CreateMaintenance from "@/components/DamageReport/CreateMaintenance";
 import CompletedMaintenance from "@/components/DamageReport/CompletedMaintenance";
-import { Head, router } from "@inertiajs/react";
+import { Head, router, usePage } from "@inertiajs/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -43,6 +44,9 @@ export default function Index({
     availableYears,
     months,
 }) {
+    const { auth } = usePage().props;
+    const isSiswa = auth?.user?.role === "siswa";
+
     const [selectedTab, setSelectedTab] = useState("alldamage");
     const [selectedYear, setSelectedYear] = useState(
         filters?.year || new Date().getFullYear().toString(),
@@ -99,7 +103,7 @@ export default function Index({
                                 Track and manage room maintenance
                             </p>
                         </div>
-                        <CreateMaintenance rooms={rooms} />
+                        {!isSiswa && <CreateMaintenance rooms={rooms} />}
                     </div>
 
                     {/* Stats Aktif */}
@@ -321,12 +325,18 @@ export default function Index({
                                                                         </div>
                                                                     )}
 
-                                                                    {m.estimated_cost && (
+                                                                    {m.estimated_cost && !isSiswa && (
                                                                         <div className="flex items-center gap-2 text-slate-600">
                                                                             <WalletMinimal className="size-4" />
                                                                             {
                                                                                 m.estimated_rupiah
                                                                             }
+                                                                        </div>
+                                                                    )}
+                                                                    {m.estimated_cost && isSiswa && (
+                                                                        <div className="flex items-center gap-2 text-slate-400">
+                                                                            <EyeOff className="size-4" />
+                                                                            <span className="text-xs">Hidden</span>
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -343,7 +353,7 @@ export default function Index({
                                                                                     m.resolution_notes
                                                                                 }
                                                                             </div>
-                                                                            {m.actual_cost && (
+                                                                            {m.actual_cost && !isSiswa && (
                                                                                 <div className="text-sm text-green-700 mt-1">
                                                                                     Actual
                                                                                     cost:{" "}
@@ -356,34 +366,36 @@ export default function Index({
                                                                     )}
                                                             </div>
 
-                                                            <div className="ml-4">
-                                                                {m.status ===
-                                                                    "pending" && (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                                        onClick={() => {
-                                                                            handleApprove(
-                                                                                m.id,
-                                                                            );
-                                                                        }}
-                                                                    >
-                                                                        Approve
-                                                                    </Button>
-                                                                )}
-                                                                {m.status ===
-                                                                    "in-progress" && (
-                                                                    <CompletedMaintenance
-                                                                        id={
-                                                                            m.id
-                                                                        }
-                                                                        estimated_cost={
-                                                                            m.estimated_cost
-                                                                        }
-                                                                    />
-                                                                )}
-                                                            </div>
+                                                            {!isSiswa && (
+                                                                <div className="ml-4">
+                                                                    {m.status ===
+                                                                        "pending" && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                                            onClick={() => {
+                                                                                handleApprove(
+                                                                                    m.id,
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            Approve
+                                                                        </Button>
+                                                                    )}
+                                                                    {m.status ===
+                                                                        "in-progress" && (
+                                                                        <CompletedMaintenance
+                                                                            id={
+                                                                                m.id
+                                                                            }
+                                                                            estimated_cost={
+                                                                                m.estimated_cost
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ),
@@ -493,7 +505,7 @@ export default function Index({
                                 </CardHeader>
                             </Card>
 
-                            {/* 2. History Stats (Tetap Sama) */}
+                            {/* 2. History Stats */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <StatCard
                                     title="Total Requests"
@@ -503,27 +515,41 @@ export default function Index({
                                     }
                                     subText="Completed and cancelled"
                                     exportLink={
-                                        historyMaintenances?.data?.length > 0 && selectedMonth !== "all"
+                                        historyMaintenances?.data?.length > 0 && selectedMonth !== "all" && !isSiswa
                                             ? `/Damagereport/export?year=${selectedYear}&month=${selectedMonth}`
                                             : null
                                     }
                                 />
-                                <StatCard
-                                    title="Total Cost"
-                                    value={`Rp ${historyStats?.totalCost.toLocaleString("id-ID") || 0}`}
-                                    icon={
-                                        <DollarSign className="size-4 text-emerald-600" />
-                                    }
-                                    subText="Actual expenditure"
-                                />
-                                <StatCard
-                                    title="Average Cost"
-                                    value={`Rp ${historyStats?.avgCost.toLocaleString("id-ID") || 0}`}
-                                    icon={
-                                        <TrendingUp className="size-4 text-blue-600" />
-                                    }
-                                    subText="Per request"
-                                />
+                                {!isSiswa && (
+                                    <>
+                                        <StatCard
+                                            title="Total Cost"
+                                            value={`Rp ${historyStats?.totalCost.toLocaleString("id-ID") || 0}`}
+                                            icon={
+                                                <DollarSign className="size-4 text-emerald-600" />
+                                            }
+                                            subText="Actual expenditure"
+                                        />
+                                        <StatCard
+                                            title="Average Cost"
+                                            value={`Rp ${historyStats?.avgCost.toLocaleString("id-ID") || 0}`}
+                                            icon={
+                                                <TrendingUp className="size-4 text-blue-600" />
+                                            }
+                                            subText="Per request"
+                                        />
+                                    </>
+                                )}
+                                {isSiswa && (
+                                    <StatCard
+                                        title="Financial Data"
+                                        value="Hidden"
+                                        icon={
+                                            <EyeOff className="size-4 text-slate-400" />
+                                        }
+                                        subText="Not visible for students"
+                                    />
+                                )}
                             </div>
 
                             {/* 3. History List Card (Menggantikan Table) */}
@@ -676,12 +702,18 @@ export default function Index({
                                                                         </div>
                                                                     )}
 
-                                                                    {m.estimated_cost && (
+                                                                    {m.estimated_cost && !isSiswa && (
                                                                         <div className="flex items-center gap-2 text-slate-600">
                                                                             <WalletMinimal className="size-4" />
                                                                             {
                                                                                 m.estimated_rupiah
                                                                             }
+                                                                        </div>
+                                                                    )}
+                                                                    {m.estimated_cost && isSiswa && (
+                                                                        <div className="flex items-center gap-2 text-slate-400">
+                                                                            <EyeOff className="size-4" />
+                                                                            <span className="text-xs">Hidden</span>
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -698,7 +730,7 @@ export default function Index({
                                                                                     m.resolution_notes
                                                                                 }
                                                                             </div>
-                                                                            {m.actual_cost && (
+                                                                            {m.actual_cost && !isSiswa && (
                                                                                 <div className="text-sm text-green-700 mt-1">
                                                                                     Actual
                                                                                     cost:{" "}

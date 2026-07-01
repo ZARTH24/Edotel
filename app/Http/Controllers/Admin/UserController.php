@@ -17,7 +17,11 @@ class UserController extends Controller
     {
         $query = User::query();
 
-        $query->whereIn('role', ['front-office', 'housekeeping']);
+        // Tampilkan semua user (admin, siswa, front-office, housekeeping)
+        // Filter berdasarkan role jika ada parameter role
+        if ($request->has('role') && $request->role != '') {
+            $query->where('role', $request->role);
+        }
 
         // Logika fitur pencarian kata kunci (nama / email)
         if ($request->has('search') && $request->search != '') {
@@ -28,10 +32,18 @@ class UserController extends Controller
             });
         }
 
-        // Ambil data terbaru
-        $users = $query->orderByRaw("FIELD(role, 'front-office', 'housekeeping')")
-            ->latest()
-            ->paginate(5)
+        // Sortir: Admin di atas, lalu front-office, housekeeping, siswa paling bawah
+        $query->orderByRaw("CASE
+            WHEN role = 'admin' THEN 1
+            WHEN role = 'front-office' THEN 2
+            WHEN role = 'housekeeping' THEN 3
+            WHEN role = 'siswa' THEN 4
+            ELSE 5
+        END");
+
+        // Ambil data terbaru dalam urutan role
+        $users = $query->latest()
+            ->paginate(10)
             ->withQueryString();
 
         return inertia('Admin/Index', [

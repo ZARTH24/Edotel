@@ -20,10 +20,16 @@ class RoleCheck
             return redirect('/login');
         }
 
+        // Admin punya akses ke semua halaman
+        if (Auth::user()->role === 'admin') {
+            return $next($request);
+        }
+
+        // Siswa hanya bisa akses jika role-nya diizinkan
         if (!in_array(Auth::user()->role, $roles)) {
-            // Redirect ke halaman dashboard atau tampilkan 403
             abort(403, 'Unauthorized access');
         }
+
         return $next($request);
     }
 }

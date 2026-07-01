@@ -19,8 +19,10 @@ function ProgressBar() {
         router.on("finish", finish);
 
         return () => {
-            router.off("start", start);
-            router.off("finish", finish);
+            if (typeof router.off === "function") {
+                router.off("start", start);
+                router.off("finish", finish);
+            }
         };
     }, []);
 

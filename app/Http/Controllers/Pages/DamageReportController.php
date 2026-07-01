@@ -8,6 +8,7 @@ use App\Models\DamageReport\DamageReports;
 use App\Models\FrontOffice\Room;
 use App\Models\User;
 use App\Exports\DamageReportsExport;
+use App\Services\Simulation\SimulationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,32 @@ class DamageReportController extends Controller
             'label' => Carbon::createFromFormat('m', $m)->format('F'),
         ])->prepend(['value' => 'all', 'label' => 'All Months']);
 
+        // 7. Check if simulation mode is active - merge simulation data
+        $user = auth()->user();
+        $isSimulation = SimulationService::isSimulationMode() || ($user && $user->role === 'siswa' && $user->is_menu_unlocked);
+
+        if ($isSimulation) {
+            $simulationData = SimulationService::getSimulationData();
+            $simulatedReports = $simulationData['damage_reports'] ?? [];
+
+            // Add simulated reports to active maintenances
+            foreach ($simulatedReports as $simReport) {
+                if (in_array($simReport['status'] ?? '', ['pending', 'in-progress', 'approved'])) {
+                    $activeMaintenances->push((object)[
+                        'id' => $simReport['report_id'] ?? uniqid('sim_'),
+                        'room_id' => $simReport['room_id'],
+                        'description' => $simReport['description'] ?? '',
+                        'status' => $simReport['status'] ?? 'pending',
+                        'priority' => $simReport['priority'] ?? 'medium',
+                        'is_simulated' => true,
+                        'simulated_at' => $simReport['simulated_at'] ?? null,
+                        'room' => Room::find($simReport['room_id']),
+                        'assign' => null,
+                    ]);
+                }
+            }
+        }
+
         return inertia('DamageReport/Index', [
             'maintenances'        => $activeMaintenances, // Untuk tab aktif
             'historyMaintenances' => $historyMaintenances, // Untuk tab history (Object Pagination)
@@ -79,6 +106,33 @@ class DamageReportController extends Controller
 
     public function store(DamageReportRequest $request)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            $data = $request->validated();
+
+            $simulationResult = SimulationService::simulateDamageReport([
+                'room_id' => $data['room_id'],
+                'description' => $data['description'] ?? '',
+                'priority' => $data['priority'] ?? 'medium',
+            ]);
+
+            return redirect()->back()->with([
+                'message' => '✅ Damage Report berhasil DICIPTAKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         $data = $request->validated();
         $data['reported_at'] = now();
         $data['reported_by'] = auth()->user()->name;
@@ -133,6 +187,36 @@ class DamageReportController extends Controller
 
     public function approve($id)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            $task = DamageReports::findOrFail($id);
+
+            if (!in_array($task->status, ['pending'])) {
+                return back()->with([
+                    'message' => 'This maintenance task cannot be started.',
+                    'type' => 'error',
+                ]);
+            }
+
+            $simulationResult = SimulationService::simulateApproveDamageReport((string) $id);
+
+            return back()->with([
+                'message' => '✅ Damage Report berhasil DIAPPROVE! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         // Ambil task berdasarkan route param $id
         $task = DamageReports::findOrFail($id);
 
@@ -170,6 +254,41 @@ class DamageReportController extends Controller
 
     public function complete(Request $request)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+
+            $request->validate([
+                'resolution_notes' => 'required|string|max:1000',
+                'actual_cost' => 'nullable|numeric|min:0',
+            ]);
+
+            $damagereport = DamageReports::findOrFail($request->id);
+
+            if ($damagereport->status !== 'in-progress') {
+                return back()->with([
+                    'message' => 'Damage Report is not currently in progress.',
+                    'type' => 'error'
+                ]);
+            }
+
+            $simulationResult = SimulationService::simulateCompleteDamageReport((string) $request->id);
+
+            return back()->with([
+                'message' => '✅ Damage Report berhasil DISELESAIKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         $request->validate([
             'resolution_notes' => 'required|string|max:1000',
             'actual_cost' => 'nullable|numeric|min:0',

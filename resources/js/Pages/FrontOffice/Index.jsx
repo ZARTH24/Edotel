@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Search, Calendar, Phone, Mail, MapPin, Plus, Eye, Pencil, Loader2, UserCheck, UserX, LogOut, Users } from "lucide-react";
+import { Search, Calendar, Phone, Mail, MapPin, Plus, Eye, Pencil, Loader2, UserCheck, UserX, LogOut, Users, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout/Layout";
-import { Head, Link, router, useForm } from "@inertiajs/react";
+import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import TabsHistoryReservation from "@/components/FrontOffice/TabsHistoryReservation";
 import Rooms from "@/components/FrontOffice/Room/Rooms";
 
@@ -21,6 +21,12 @@ export default function Index({
     availableYears,
     months,
 }) {
+    const { auth } = usePage().props;
+    const isSiswa = auth?.user?.role === "siswa";
+    const isAdmin = auth?.user?.role === "admin";
+    const isFrontOffice = auth?.user?.role === "front-office";
+    const isHousekeeping = auth?.user?.role === "housekeeping";
+    const isReadOnly = isFrontOffice || isHousekeeping || isSiswa; // Read-only for non-admin
     const STORAGE_KEY = "reservations";
 
     const [selectedTab, setSelectedTab] = useState(() => {
@@ -124,13 +130,15 @@ export default function Index({
                                 Guest services and reservations management
                             </p>
                         </div>
-                        <Link
-                            href={"/Frontoffice/reservation/create"}
-                            className="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [a]:hover:bg-primary/80 h-8 gap-1.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white p-4 py-5"
-                        >
-                            <Plus className="size-4 mr-2" />
-                            New Reservation
-                        </Link>
+                        {!isSiswa && (
+                            <Link
+                                href={"/Frontoffice/reservation/create"}
+                                className="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [a]:hover:bg-primary/80 h-8 gap-1.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white p-4 py-5"
+                            >
+                                <Plus className="size-4 mr-2" />
+                                New Reservation
+                            </Link>
+                        )}
                     </div>
 
                     <Tabs value={selectedTab} onValueChange={setSelectedTab}>
@@ -195,7 +203,14 @@ export default function Index({
                                                             </td>
                                                             <td className="py-3 px-4">
                                                                 <div className="font-medium text-slate-900">{reservation.guest.name}</div>
-                                                                <div className="text-sm text-slate-500">{reservation.guest.email}</div>
+                                                                {isSiswa ? (
+                                                                    <div className="text-sm text-slate-400 flex items-center gap-1">
+                                                                        <EyeOff className="size-3" />
+                                                                        <span>Hidden</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="text-sm text-slate-500">{reservation.guest.email}</div>
+                                                                )}
                                                             </td>
                                                             <td className="py-3 px-4">
                                                                 <div className="font-medium text-slate-900">{reservation.room.number}</div>
@@ -225,74 +240,85 @@ export default function Index({
                                                             </td>
                                                             <td className="py-3 px-4">
                                                                 <div className="flex items-center gap-1">
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        disabled={loadingId === reservation.id}
-                                                                        onClick={() => handleView(`/Frontoffice/reservations/${reservation.booking_reference || reservation.id}/details`, reservation.id)}
-                                                                    >
-                                                                        {loadingId === reservation.id ? (
-                                                                            <Loader2 className="size-3 animate-spin" />
-                                                                        ) : (
-                                                                            <Eye className="size-3" />
-                                                                        )}
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        disabled={loadingId === reservation.id}
-                                                                        onClick={() => handleView(`/Frontoffice/reservations/${reservation.id}/edit`, reservation.id)}
-                                                                    >
-                                                                        {loadingId === reservation.id ? (
-                                                                            <Loader2 className="size-3 animate-spin" />
-                                                                        ) : (
-                                                                            <Pencil className="size-3" />
-                                                                        )}
-                                                                    </Button>
-                                                                    {reservation.status === "confirmed" && (
+                                                                    {/* Tombol aksi - untuk Admin, Front Office, Housekeeping */}
+                                                                    {(isAdmin || isFrontOffice || isHousekeeping) && (
                                                                         <>
                                                                             <Button
                                                                                 variant="outline"
                                                                                 size="sm"
-                                                                                className="border-green-300 text-green-700 hover:bg-green-50"
                                                                                 disabled={loadingId === reservation.id}
-                                                                                onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/checkin`, reservation.id)}
+                                                                                onClick={() => handleView(`/Frontoffice/reservations/${reservation.booking_reference || reservation.id}/details`, reservation.id)}
                                                                             >
                                                                                 {loadingId === reservation.id ? (
                                                                                     <Loader2 className="size-3 animate-spin" />
                                                                                 ) : (
-                                                                                    <UserCheck className="size-3" />
+                                                                                    <Eye className="size-3" />
                                                                                 )}
                                                                             </Button>
                                                                             <Button
                                                                                 variant="outline"
                                                                                 size="sm"
-                                                                                className="border-red-300 text-red-700 hover:bg-red-50"
                                                                                 disabled={loadingId === reservation.id}
-                                                                                onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/cancel`, reservation.id)}
+                                                                                onClick={() => handleView(`/Frontoffice/reservations/${reservation.id}/edit`, reservation.id)}
                                                                             >
                                                                                 {loadingId === reservation.id ? (
                                                                                     <Loader2 className="size-3 animate-spin" />
                                                                                 ) : (
-                                                                                    <UserX className="size-3" />
+                                                                                    <Pencil className="size-3" />
                                                                                 )}
                                                                             </Button>
+                                                                            {reservation.status === "confirmed" && (
+                                                                                <>
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        className="border-green-300 text-green-700 hover:bg-green-50"
+                                                                                        disabled={loadingId === reservation.id}
+                                                                                        onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/checkin`, reservation.id)}
+                                                                                    >
+                                                                                        {loadingId === reservation.id ? (
+                                                                                            <Loader2 className="size-3 animate-spin" />
+                                                                                        ) : (
+                                                                                            <UserCheck className="size-3" />
+                                                                                        )}
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="outline"
+                                                                                        size="sm"
+                                                                                        className="border-red-300 text-red-700 hover:bg-red-50"
+                                                                                        disabled={loadingId === reservation.id}
+                                                                                        onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/cancel`, reservation.id)}
+                                                                                    >
+                                                                                        {loadingId === reservation.id ? (
+                                                                                            <Loader2 className="size-3 animate-spin" />
+                                                                                        ) : (
+                                                                                            <UserX className="size-3" />
+                                                                                        )}
+                                                                                    </Button>
+                                                                                </>
+                                                                            )}
+                                                                            {reservation.status === "checked-in" && (
+                                                                                <Button
+                                                                                    variant="outline"
+                                                                                    size="sm"
+                                                                                    className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                                                                                    disabled={loadingId === reservation.id}
+                                                                                    onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/checkout`, reservation.id)}
+                                                                                >
+                                                                                    {loadingId === reservation.id ? (
+                                                                                        <Loader2 className="size-3 animate-spin" />
+                                                                                    ) : (
+                                                                                        <LogOut className="size-3" />
+                                                                                    )}
+                                                                                </Button>
+                                                                            )}
                                                                         </>
                                                                     )}
-                                                                    {reservation.status === "checked-in" && (
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                                                                            disabled={loadingId === reservation.id}
-                                                                            onClick={() => handleAction(`/Frontoffice/reservations/${reservation.id}/checkout`, reservation.id)}
-                                                                        >
-                                                                            {loadingId === reservation.id ? (
-                                                                                <Loader2 className="size-3 animate-spin" />
-                                                                            ) : (
-                                                                                <LogOut className="size-3" />
-                                                                            )}
-                                                                        </Button>
+                                                                    {/* Badge info untuk siswa - read only */}
+                                                                    {isSiswa && (
+                                                                        <Badge variant="secondary" className="text-xs text-slate-500 bg-slate-100 hover:bg-slate-100 cursor-default">
+                                                                            No Access
+                                                                        </Badge>
                                                                     )}
                                                                 </div>
                                                             </td>
@@ -337,15 +363,18 @@ export default function Index({
                                         <CardTitle className="text-slate-900">
                                             Room Availability
                                         </CardTitle>
-                                        <div>
-                                            <Link
-                                                href={`/Frontoffice/create/room`}
-                                                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900"
-                                            >
-                                                <Plus className="size-4" />
-                                                Add New Room
-                                            </Link>
-                                        </div>
+                                        {/* Add New Room - untuk Admin, Front Office, Housekeeping */}
+                                        {(isAdmin || isFrontOffice || isHousekeeping) && (
+                                            <div>
+                                                <Link
+                                                    href={`/Frontoffice/create/room`}
+                                                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900"
+                                                >
+                                                    <Plus className="size-4" />
+                                                    Add New Room
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
                                 </CardHeader>
 
@@ -397,14 +426,29 @@ export default function Index({
                                                         </Badge>
                                                     </div>
                                                     <div className="space-y-2 text-sm">
-                                                        <div className="flex items-center gap-2 text-slate-600">
-                                                            <Mail className="size-4" />
-                                                            {reservation.guest?.email ?? "-"}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-slate-600">
-                                                            <Phone className="size-4" />
-                                                            {reservation.guest?.phone}
-                                                        </div>
+                                                        {!isSiswa ? (
+                                                            <>
+                                                                <div className="flex items-center gap-2 text-slate-600">
+                                                                    <Mail className="size-4" />
+                                                                    {reservation.guest?.email ?? "-"}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-slate-600">
+                                                                    <Phone className="size-4" />
+                                                                    {reservation.guest?.phone}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="flex items-center gap-2 text-slate-400">
+                                                                    <EyeOff className="size-4" />
+                                                                    <span className="text-xs">Email hidden</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 text-slate-400">
+                                                                    <EyeOff className="size-4" />
+                                                                    <span className="text-xs">Phone hidden</span>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                         <div className="flex items-center gap-2 text-slate-600">
                                                             <MapPin className="size-4" />
                                                             {reservation.guest?.nationality ?? "-"}

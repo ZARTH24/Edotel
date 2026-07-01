@@ -10,6 +10,7 @@ use App\Models\FrontOffice\Reservation;
 use App\Models\FrontOffice\Room;
 use App\Models\HouseKeeping\CleaningTask;
 use App\Models\User;
+use App\Services\Simulation\SimulationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,20 @@ class ReservationController extends Controller
 
     public function store(StoreReservationRequest $request)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        // Also check if user has is_menu_unlocked flag as fallback
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session for future requests
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+            return $this->simulateStore($request);
+        }
+
         $data = $request->validated();
 
         try {
@@ -101,6 +116,49 @@ class ReservationController extends Controller
         }
     }
 
+    /**
+     * Simulation mode - Store reservation (for siswa role)
+     */
+    protected function simulateStore(StoreReservationRequest $request)
+    {
+        $data = $request->validated();
+
+        try {
+            // Calculate total price (simulation)
+            $room = Room::findOrFail($data['room_id']);
+            $checkIn = Carbon::parse($data['check_in']);
+            $checkOut = Carbon::parse($data['check_out']);
+            $nights = $checkIn->diffInDays($checkOut) ?: 1;
+
+            $totalMiscPrice = collect($data['miscellaneous'] ?? [])->filter(function ($item) {
+                return !empty($item['service']);
+            })->reduce(function ($total, $item) {
+                return $total + ($item['price'] * ($item['qty'] ?? 1));
+            }, 0);
+
+            $roomTotal = $room->price * $nights;
+            $grandTotal = $roomTotal + $totalMiscPrice;
+
+            $data['total_price'] = $grandTotal;
+
+            // Simulate reservation
+            $simulationResult = SimulationService::simulateReservation($data);
+
+            return redirect('/Frontoffice')->with([
+                'message' => '✅ Reservation berhasil DISIMULASIKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Simulation reservation error: ' . $e->getMessage());
+            return back()->with([
+                'message' => 'Error simulasi: ' . $e->getMessage(),
+                'type' => 'error',
+            ]);
+        }
+    }
+
     public function show($booking_reference)
     {
         $reservation = Reservation::with(['guest', 'room'])->where('booking_reference', $booking_reference)->firstOrFail();
@@ -139,6 +197,23 @@ class ReservationController extends Controller
 
     public function update(StoreReservationRequest $request, Reservation $reservation)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        if ($isSimulation || $hasUnlockedMenu) {
+            // Ensure simulation mode is enabled in session for future requests
+            if (!$isSimulation && $hasUnlockedMenu) {
+                SimulationService::enableSimulation();
+            }
+            return redirect('/Frontoffice')->with([
+                'message' => '✅ Reservation berhasil DIUPDATE! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+            ]);
+        }
+
         DB::transaction(function () use ($request, $reservation) {
             // 1. Update data tamu
             $reservation->guest->update([
@@ -216,6 +291,38 @@ class ReservationController extends Controller
 
     public function checkin(Reservation $reservation)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        $isSimulationMode = $isSimulation || $hasUnlockedMenu;
+
+        // Ensure simulation mode is enabled in session for future requests
+        if (!$isSimulation && $hasUnlockedMenu) {
+            SimulationService::enableSimulation();
+        }
+
+        if ($isSimulationMode) {
+            // Validate like the real controller
+            if ($reservation->status !== 'confirmed') {
+                return redirect()->back()->with([
+                    'message' => 'Only confirmed reservations can check in.',
+                    'type' => 'error',
+                ]);
+            }
+
+            // Simulate check-in
+            $simulationResult = SimulationService::simulateCheckin($reservation->booking_reference);
+
+            return redirect()->back()->with([
+                'message' => '✅ Check-in berhasil DISIMULASIKAN! Kamar ' . $reservation->room->number . ' (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         // 1. Load relasi agar data room tersedia
         $reservation->load('room');
         $room = $reservation->room;
@@ -283,6 +390,37 @@ class ReservationController extends Controller
 
     public function checkout(Reservation $reservation)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        $isSimulationMode = $isSimulation || $hasUnlockedMenu;
+
+        // Ensure simulation mode is enabled in session for future requests
+        if (!$isSimulation && $hasUnlockedMenu) {
+            SimulationService::enableSimulation();
+        }
+
+        if ($isSimulationMode) {
+            if ($reservation->status !== 'checked-in') {
+                return redirect()->back()->with([
+                    'message' => 'Guest has not checked in yet.',
+                    'type' => 'error',
+                ]);
+            }
+
+            // Simulate check-out
+            $simulationResult = SimulationService::simulateCheckout($reservation->booking_reference);
+
+            return redirect()->back()->with([
+                'message' => '✅ Check-out berhasil DISIMULASIKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         try {
             DB::transaction(function () use ($reservation) {
                 // 1. Validasi Awal
@@ -367,6 +505,37 @@ class ReservationController extends Controller
 
     public function cancel(Reservation $reservation)
     {
+        // Check if simulation mode is active (for siswa role with unlocked menus)
+        $isSimulation = SimulationService::isSimulationMode();
+        $user = auth()->user();
+        $hasUnlockedMenu = $user && $user->role === 'siswa' && $user->is_menu_unlocked;
+
+        $isSimulationMode = $isSimulation || $hasUnlockedMenu;
+
+        // Ensure simulation mode is enabled in session for future requests
+        if (!$isSimulation && $hasUnlockedMenu) {
+            SimulationService::enableSimulation();
+        }
+
+        if ($isSimulationMode) {
+            if (in_array($reservation->status, ['checked-in', 'checked-out'])) {
+                return redirect()->back()->with([
+                    'message' => 'Cannot cancel: Guest has already checked in or the stay is completed.',
+                    'type' => 'error',
+                ]);
+            }
+
+            // Simulate cancellation
+            $simulationResult = SimulationService::simulateCancel($reservation->booking_reference);
+
+            return redirect()->back()->with([
+                'message' => '✅ Reservation berhasil DIBATALKAN! (Simulation Mode)',
+                'type' => 'success',
+                'is_simulation' => true,
+                'simulation_id' => $simulationResult['simulation_id'],
+            ]);
+        }
+
         try {
             // 1. Validation: Prevent cancellation if guest has already checked in or checked out
             if (in_array($reservation->status, ['checked-in', 'checked-out'])) {

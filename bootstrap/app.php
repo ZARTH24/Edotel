@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\CheckUnlock;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SimulationModeMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            SimulationModeMiddleware::class,
+        ]);
+
+        // Register middleware aliases
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleCheck::class,
+            'simulation' => SimulationModeMiddleware::class,
+            'checkUnlock' => CheckUnlock::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

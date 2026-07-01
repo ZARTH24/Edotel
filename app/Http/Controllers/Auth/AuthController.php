@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Models\User;
+use App\Services\Simulation\SimulationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -27,17 +28,19 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            // Redirect berdasarkan role
-            if ($user->role === 'admin') {
-                return redirect('/Dashboard');
-            } elseif ($user->role === 'front-office') {
-                return redirect('/Dashboard');
-            } elseif ($user->role === 'housekeeping') {
-                return redirect('/Housekeeping');
+            // Enable simulation mode for siswa with unlocked menus
+            if ($user->role === 'siswa' && $user->is_menu_unlocked) {
+                SimulationService::enableSimulation();
             }
 
-            // fallback
-            return redirect()->back();
+            // Redirect berdasarkan role
+            if (in_array($user->role, ['admin', 'front-office', 'housekeeping'])) {
+                // Staff -> Dashboard
+                return redirect('/Dashboard');
+            } else {
+                // Siswa -> Siswa Dashboard
+                return redirect('/siswa/dashboard');
+            }
         }
 
         return redirect()->back()->with(

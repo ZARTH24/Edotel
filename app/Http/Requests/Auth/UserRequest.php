@@ -33,7 +33,7 @@ class UserRequest extends FormRequest
                 Rule::unique('users')->ignore($userId),
             ],
             'password' => $userId ? 'nullable|string|min:6|confirmed' : 'required|string|min:6|confirmed',
-            'role' => ['required', Rule::in(['admin', 'front-office', 'housekeeping'])],
+            'role' => ['required', Rule::in(['admin', 'front-office', 'housekeeping', 'siswa'])],
             'avatar' => 'nullable|string|max:500',
             'phone' => 'nullable|numeric|digits_between:10,13',
             'is_active' => 'boolean',
