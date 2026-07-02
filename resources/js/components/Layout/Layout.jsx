@@ -82,7 +82,7 @@ export default function Layout({ children }) {
     };
 
     // Check if menu is unlocked based on E-Learning progress
-    const isMenuUnlocked = auth.user?.is_menu_unlocked ?? false;
+    const isMenuUnlocked = Boolean(auth.user?.is_menu_unlocked ?? false);
 
     React.useEffect(() => {
         if (flash?.message) {
@@ -259,12 +259,12 @@ export default function Layout({ children }) {
                                 >
                                     <BookOpen className="size-5" />
                                     <span>E-Learning</span>
-                                    {elearning?.progress_percentage > 0 && elearning?.progress_percentage < 100 && (
+                                    {(elearning?.progress_percentage > 0 && elearning?.progress_percentage < 100) && (
                                         <Badge variant="outline" className="ml-auto text-xs">
                                             {elearning.progress_percentage}%
                                         </Badge>
                                     )}
-                                    {elearning?.progress_percentage === 100 && (
+                                    {(elearning?.progress_percentage === 100) && (
                                         <CheckCircle className="size-4 ml-auto text-green-500" />
                                     )}
                                     {/* Chevron indicator untuk admin/siswa */}
