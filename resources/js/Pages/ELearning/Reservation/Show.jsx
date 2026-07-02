@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import { Toaster, toast } from "sonner";
 
 export default function ReservationShow({
@@ -35,8 +35,6 @@ export default function ReservationShow({
     const [wrongFields, setWrongFields] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formImages, setFormImages] = useState([]);
-
-    const { post, processing } = useForm();
 
     // Fetch form images
     useEffect(() => {
@@ -99,11 +97,8 @@ export default function ReservationShow({
     // Submit answer
     const handleSubmit = (formData) => {
         setIsSubmitting(true);
-        setValidationResult(null);
-        setWrongFields([]);
 
-        post(`/elearning/reservation/${exercise.slug}`, {
-            data: formData,
+        router.post(`/elearning/reservation/${exercise.slug}`, formData, {
             onFinish: () => {
                 setIsSubmitting(false);
             },
@@ -303,7 +298,7 @@ export default function ReservationShow({
                             validationResult={validationResult}
                             onSubmit={handleSubmit}
                             onReset={handleRetry}
-                            isSubmitting={isSubmitting || processing}
+                            isSubmitting={isSubmitting}
                         />
                     </div>
 

@@ -7,6 +7,7 @@ use App\Models\ELearning\Exercise;
 use App\Models\ELearning\StudentProgress;
 use App\Models\ELearning\StudentAnswer;
 use App\Models\User;
+use App\Services\ELearning\ExerciseFormService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -226,7 +227,7 @@ class ProgressController extends Controller
     public function submittedForms(Request $request)
     {
         // Get all student answers that have been completed
-        $query = StudentAnswer::with(['user', 'exercise'])
+        $query = StudentAnswer::with(['user', 'exercise.studyCase'])
             ->where('is_completed', true)
             ->orderBy('updated_at', 'desc');
 
@@ -276,6 +277,18 @@ class ProgressController extends Controller
             });
 
         $submittedForms = $answers->map(function ($answer) {
+            // Get form fields for this exercise
+            $slug = $answer->exercise->slug ?? null;
+            $formFields = $slug ? ExerciseFormService::getFields($slug) : [];
+
+            // Get study case content (TEXT)
+            $studyCaseContent = null;
+            $studyCaseTitle = null;
+            if ($answer->exercise && $answer->exercise->studyCase) {
+                $studyCaseContent = $answer->exercise->studyCase->content;
+                $studyCaseTitle = $answer->exercise->studyCase->title;
+            }
+
             return [
                 'id' => $answer->id,
                 'student_id' => $answer->user_id,
@@ -285,6 +298,10 @@ class ProgressController extends Controller
                 'exercise_id' => $answer->exercise_id,
                 'exercise_title' => $answer->exercise->title ?? 'Unknown',
                 'exercise_category' => $answer->exercise->category ?? '-',
+                'exercise_slug' => $slug,
+                'form_fields' => $formFields,
+                'study_case_content' => $studyCaseContent,
+                'study_case_title' => $studyCaseTitle,
                 'answers' => $answer->answers,
                 'score' => $answer->score,
                 'attempt' => $answer->attempt,

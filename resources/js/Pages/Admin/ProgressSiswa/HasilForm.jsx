@@ -253,9 +253,12 @@ export default function HasilFormSiswa({ submittedForms = {}, students = [], for
                     </Card>
                 </div>
 
-                {/* Detail Dialog */}
+                {/* Detail Dialog - Side by Side */}
                 <Dialog open={!!selectedForm} onOpenChange={() => setSelectedForm(null)}>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogContent
+                    className="!max-w-[98vw] !w-[98vw] !max-h-[98vh] !h-[98vh] overflow-hidden flex flex-col !p-4 !rounded-xl"
+                    style={{ maxWidth: '98vw', width: '98vw', maxHeight: '98vh', height: '98vh' }}
+                >
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <FileText className="size-5" />
@@ -263,57 +266,106 @@ export default function HasilFormSiswa({ submittedForms = {}, students = [], for
                             </DialogTitle>
                         </DialogHeader>
                         {selectedForm && (
-                            <div className="space-y-4">
-                                {/* Student Info */}
-                                <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
+                            <div className="flex-1 overflow-hidden flex flex-col gap-4 min-h-0">
+                                {/* Student Info - Compact */}
+                                <div className="grid grid-cols-4 gap-4 p-3 bg-slate-50 rounded-lg text-sm">
                                     <div>
-                                        <p className="text-sm text-slate-500">Nama Siswa</p>
-                                        <p className="font-medium">{selectedForm.student_name || 'Unknown'}</p>
+                                        <p className="text-xs text-slate-500">Siswa</p>
+                                        <p className="font-medium">{selectedForm.student_name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-slate-500">Kelas</p>
-                                        <p className="font-medium">{selectedForm.student_kelas || '-'}</p>
+                                        <p className="text-xs text-slate-500">Kelas</p>
+                                        <p className="font-medium">{selectedForm.student_kelas}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-slate-500">Form</p>
-                                        <p className="font-medium">{selectedForm.exercise_title || 'Unknown'}</p>
+                                        <p className="text-xs text-slate-500">Form</p>
+                                        <p className="font-medium">{selectedForm.exercise_title}</p>
                                     </div>
                                     <div>
-                                        <p className="text-sm text-slate-500">Kategori</p>
-                                        <p className="font-medium capitalize">{selectedForm.exercise_category || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-slate-500">Score</p>
-                                        <p className="font-medium">{selectedForm.score || 0}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-slate-500">Attempt</p>
-                                        <p className="font-medium">#{selectedForm.attempt || 1}</p>
+                                        <p className="text-xs text-slate-500">Score</p>
+                                        <Badge className={selectedForm.score >= 80 ? 'bg-green-100 text-green-700' : selectedForm.score >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}>
+                                            {selectedForm.score}
+                                        </Badge>
                                     </div>
                                 </div>
 
-                                {/* Submitted At */}
-                                <div className="flex items-center gap-2 text-sm text-slate-500">
-                                    <Calendar className="size-4" />
-                                    <span>Disubmit pada: {formatDate(selectedForm.submitted_at)}</span>
-                                </div>
-
-                                {/* Answers */}
-                                <div className="border rounded-lg">
-                                    <div className="p-3 bg-slate-100 border-b">
-                                        <h4 className="font-medium">Jawaban yang Diberikan</h4>
+                                {/* Side-by-Side: Study Case & Answers */}
+                                <div className="flex-1 overflow-hidden flex gap-4 min-h-0" style={{height: 'calc(100vh - 280px)'}}>
+                                    {/* LEFT: Study Case (Teks) */}
+                                    <div className="flex-1 overflow-hidden border rounded-lg bg-blue-50 flex flex-col">
+                                        <div className="p-3 bg-blue-100 border-b flex-shrink-0">
+                                            <h4 className="font-medium text-blue-900 flex items-center gap-2">
+                                                📋 Studi Kasus
+                                            </h4>
+                                            {selectedForm.study_case_title && (
+                                                <p className="text-xs text-blue-700 mt-0.5">
+                                                    {selectedForm.study_case_title}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="p-4 overflow-y-auto flex-1">
+                                            {selectedForm.study_case_content ? (
+                                                <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                                                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-mono">
+                                                        {selectedForm.study_case_content}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-slate-500 text-center py-8">
+                                                    Studi kasus tidak tersedia
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="p-4 space-y-4">
-                                        {Object.entries(selectedForm.answers || {}).map(([key, value]) => (
-                                            <div key={key} className="border-b pb-3 last:border-b-0 last:pb-0">
-                                                <p className="text-sm text-slate-500 mb-1">
-                                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                </p>
-                                                <p className="font-medium text-slate-900 whitespace-pre-wrap">
-                                                    {Array.isArray(value) ? value.join(', ') : value || '-'}
-                                                </p>
-                                            </div>
-                                        ))}
+
+                                    {/* RIGHT: Student Answers */}
+                                    <div className="flex-1 overflow-hidden border rounded-lg bg-white flex flex-col">
+                                        <div className="p-3 bg-amber-100 border-b flex-shrink-0">
+                                            <h4 className="font-medium text-amber-900 flex items-center gap-2">
+                                                📝 Jawaban Siswa
+                                            </h4>
+                                        </div>
+                                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                                            {(selectedForm.form_fields || []).length > 0 ? (
+                                                selectedForm.form_fields.map((field, idx) => {
+                                                    const studentAnswer = selectedForm.answers?.[field.name];
+                                                    const displayValue = Array.isArray(studentAnswer)
+                                                        ? studentAnswer.join(', ')
+                                                        : studentAnswer || '-';
+
+                                                    return (
+                                                        <div key={field.name} className="bg-slate-50 p-3 rounded-lg">
+                                                            <div className="flex items-start gap-2">
+                                                                <div className="flex-shrink-0 w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center">
+                                                                    <span className="text-amber-700 text-xs font-semibold">
+                                                                        {idx + 1}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-medium text-slate-600 mb-0.5">
+                                                                        {field.label}
+                                                                    </p>
+                                                                    <p className="text-sm text-slate-900 whitespace-pre-wrap break-words">
+                                                                        {displayValue}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                Object.entries(selectedForm.answers || {}).map(([key, value]) => (
+                                                    <div key={key} className="bg-slate-50 p-3 rounded-lg">
+                                                        <p className="text-xs font-medium text-slate-600 mb-0.5">
+                                                            {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                        </p>
+                                                        <p className="text-sm text-slate-900 whitespace-pre-wrap">
+                                                            {Array.isArray(value) ? value.join(', ') : value || '-'}
+                                                        </p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

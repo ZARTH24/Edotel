@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import { Toaster, toast } from "sonner";
 
 export default function ReceptionShow({
@@ -32,11 +32,8 @@ export default function ReceptionShow({
     const [timerActive, setTimerActive] = useState(true); // Timer langsung nyala
     const [showDocument, setShowDocument] = useState(true);
     const [validationResult, setValidationResult] = useState(null);
-    const [wrongFields, setWrongFields] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formImages, setFormImages] = useState([]);
-
-    const { post, processing } = useForm();
 
     // Fetch form images
     useEffect(() => {
@@ -73,9 +70,6 @@ export default function ReceptionShow({
                 setValidationResult({ is_correct: true });
             } else if (flash.type === "error") {
                 toast.error(flash.message);
-                if (flash.wrong_fields) {
-                    setWrongFields(flash.wrong_fields);
-                }
                 if (flash.validation) {
                     setValidationResult(flash.validation);
                 }
@@ -96,20 +90,11 @@ export default function ReceptionShow({
         setTimerActive(false);
     };
 
-    // Submit answer
+    // Submit answer - ONLY ONE POST using router.post
     const handleSubmit = (formData) => {
         setIsSubmitting(true);
-        setValidationResult(null);
-        setWrongFields([]);
 
-        // Create form data
-        const formDataObj = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-            formDataObj.append(key, value);
-        });
-
-        post(`/elearning/reception/${exercise.slug}`, {
-            data: formData,
+        router.post(`/elearning/reception/${exercise.slug}`, formData, {
             onFinish: () => {
                 setIsSubmitting(false);
             },
@@ -313,7 +298,7 @@ export default function ReceptionShow({
                             validationResult={validationResult}
                             onSubmit={handleSubmit}
                             onReset={handleRetry}
-                            isSubmitting={isSubmitting || processing}
+                            isSubmitting={isSubmitting}
                         />
                     </div>
 
